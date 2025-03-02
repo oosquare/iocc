@@ -1,0 +1,8 @@
+[package]
+name = "iocc"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Minimal dependency injection framework"
+authors = ["Justin Chen oosquare@outlook.com"]
+repository = "https://github.com/oosquare/iocc"
