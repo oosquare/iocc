@@ -6,3 +6,6 @@ license = "MIT"
 description = "Minimal dependency injection framework"
 authors = ["Justin Chen oosquare@outlook.com"]
 repository = "https://github.com/oosquare/iocc"
+
+[dependencies]
+as-any = "0.3.2"
