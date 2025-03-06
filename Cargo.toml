@@ -10,3 +10,6 @@ repository = "https://github.com/oosquare/iocc"
 [dependencies]
 as-any = "0.3.2"
 snafu = "0.8.5"
+
+[dev-dependencies]
+mockall = "0.13.1"

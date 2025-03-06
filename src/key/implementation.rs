@@ -1,10 +1,11 @@
 use std::any;
+use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 use crate::container::Managed;
-use crate::key::TypedKey;
+use crate::key::{DynKey, TypedKey};
 
 pub struct KeyImpl<T, Q>
 where
@@ -97,6 +98,16 @@ where
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.qualifier.hash(state);
+    }
+}
+
+impl<T, Q> Borrow<DynKey> for KeyImpl<T, Q>
+where
+    T: Managed,
+    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+{
+    fn borrow(&self) -> &DynKey {
+        self
     }
 }
 

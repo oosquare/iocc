@@ -7,6 +7,7 @@ use crate::key::{DynKey, Key, TypedKey};
 
 pub type DynInjector = dyn Injector + Send + Sync + 'static;
 
+#[cfg_attr(test, mockall::automock)]
 pub trait Injector: Send + Sync + 'static {
     fn dyn_get(&mut self, key: &dyn Key) -> Result<Box<dyn Any>, InjectorError>;
 }

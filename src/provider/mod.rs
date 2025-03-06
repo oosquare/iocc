@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::fmt::Debug;
 
 use crate::container::injector::{DynInjector, InjectorError, TypedInjector};
 use crate::container::Managed;
@@ -6,7 +7,7 @@ use crate::key::{DynKey, TypedKey};
 
 pub type DynProvider = dyn Provider + Send + Sync + 'static;
 
-pub trait Provider: Send + Sync + 'static {
+pub trait Provider: Debug + Send + Sync + 'static {
     fn dyn_provide(&self, injector: &mut DynInjector) -> Result<Box<dyn Any>, InjectorError>;
 
     fn dyn_key(&self) -> &DynKey;
