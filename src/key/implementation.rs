@@ -34,10 +34,7 @@ where
     Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
 {
     fn clone(&self) -> Self {
-        Self {
-            qualifier: self.qualifier,
-            _marker: PhantomData,
-        }
+        *self
     }
 }
 

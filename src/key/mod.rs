@@ -71,7 +71,7 @@ impl<T: TypedKey> Key for T {
     }
 
     fn dyn_clone(&self) -> Box<DynKey> {
-        Box::new(self.clone())
+        Box::new(*self)
     }
 }
 
