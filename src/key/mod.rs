@@ -7,27 +7,20 @@ use std::hash::{Hash, Hasher};
 
 use as_any::AsAny;
 
+use crate::container::Managed;
 use crate::key::hash::DynHash;
 
 pub use crate::key::implementation::KeyImpl;
+
+pub type DynKey = dyn Key + Send + Sync + 'static;
 
 pub trait Key
 where
     Self: Debug + Display + AsAny + DynHash + Send + Sync + 'static,
 {
-    type Target: Send + 'static
-    where
-        Self: Sized;
-
-    type Qualifier: Copy + Debug + Eq + Hash + Send + Sync + 'static
-    where
-        Self: Sized;
-
     fn target(&self) -> TypeId;
 
-    fn qualifier(&self) -> Self::Qualifier
-    where
-        Self: Sized;
+    fn dyn_clone(&self) -> Box<DynKey>;
 }
 
 impl PartialEq for dyn Key {
@@ -72,17 +65,35 @@ impl Hash for dyn Key + Send + Sync {
     }
 }
 
-pub fn of<T: Send + 'static>() -> KeyImpl<T, ()> {
+impl<T: TypedKey> Key for T {
+    fn target(&self) -> TypeId {
+        TypeId::of::<T::Target>()
+    }
+
+    fn dyn_clone(&self) -> Box<DynKey> {
+        Box::new(self.clone())
+    }
+}
+
+pub trait TypedKey: Key + Copy + Eq + Hash {
+    type Target: Managed;
+
+    type Qualifier: Copy + Debug + Eq + Hash + Send + Sync + 'static;
+
+    fn qualifier(&self) -> Self::Qualifier;
+}
+
+pub fn of<T: Managed>() -> KeyImpl<T, ()> {
     KeyImpl::new(())
 }
 
-pub fn named<T: Send + 'static>(name: &'static str) -> KeyImpl<T, &'static str> {
+pub fn named<T: Managed>(name: &'static str) -> KeyImpl<T, &'static str> {
     KeyImpl::new(name)
 }
 
 pub fn qualified<T, Q>(qualifier: Q) -> KeyImpl<T, Q>
 where
-    T: Send + 'static,
+    T: Managed,
     Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
 {
     KeyImpl::new(qualifier)
