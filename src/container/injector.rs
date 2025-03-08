@@ -3,9 +3,7 @@ use std::any::Any;
 use snafu::prelude::*;
 
 use crate::container::Managed;
-use crate::key::{DynKey, Key, TypedKey};
-
-pub type DynInjector = dyn Injector + Send + Sync + 'static;
+use crate::key::{Key, TypedKey};
 
 #[cfg_attr(test, mockall::automock)]
 pub trait Injector: Send + Sync + 'static {
@@ -13,11 +11,11 @@ pub trait Injector: Send + Sync + 'static {
 }
 
 pub trait TypedInjector: Injector {
-    fn get<K>(&mut self, key: K) -> Result<K::Target, InjectorError>
+    fn get<K>(&mut self, key: &K) -> Result<K::Target, InjectorError>
     where
         K: TypedKey<Target: Managed>,
     {
-        self.dyn_get(&key)
+        self.dyn_get(key)
             .and_then(|boxed| {
                 boxed
                     .downcast::<K::Target>()
@@ -26,20 +24,20 @@ pub trait TypedInjector: Injector {
             .map(|boxed| *boxed)
     }
 
-    fn upcast_dyn(&mut self) -> &mut DynInjector;
+    fn upcast_dyn(&mut self) -> &mut dyn Injector;
 }
 
 impl<T> TypedInjector for T
 where
     T: Injector,
 {
-    fn upcast_dyn(&mut self) -> &mut DynInjector {
+    fn upcast_dyn(&mut self) -> &mut dyn Injector {
         self
     }
 }
 
-impl TypedInjector for DynInjector {
-    fn upcast_dyn(&mut self) -> &mut DynInjector {
+impl TypedInjector for dyn Injector {
+    fn upcast_dyn(&mut self) -> &mut dyn Injector {
         self
     }
 }
@@ -49,10 +47,10 @@ impl TypedInjector for DynInjector {
 pub enum InjectorError {
     #[snafu(display("could not found the object identified by the given key {key}"))]
     #[non_exhaustive]
-    NotFound { key: Box<DynKey> },
+    NotFound { key: Box<dyn Key> },
     #[snafu(display("could not construct the object {key} which depends on itself somehow"))]
     #[non_exhaustive]
-    CyclicDependency { key: Box<DynKey> },
+    CyclicDependency { key: Box<dyn Key> },
     #[snafu(display("could not downcast the object to the given concrete type"))]
     #[non_exhaustive]
     TypeMismatched,

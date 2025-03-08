@@ -11,15 +11,13 @@ use crate::util::any::AsAny;
 
 pub use crate::key::implementation::KeyImpl;
 
-pub type DynKey = dyn Key + Send + Sync + 'static;
-
 pub trait Key
 where
     Self: Debug + Display + AsAny + DynHash + Send + Sync + 'static,
 {
     fn target(&self) -> TypeId;
 
-    fn dyn_clone(&self) -> Box<DynKey>;
+    fn dyn_clone(&self) -> Box<dyn Key>;
 }
 
 impl PartialEq for dyn Key {
@@ -69,7 +67,7 @@ impl<T: TypedKey> Key for T {
         TypeId::of::<T::Target>()
     }
 
-    fn dyn_clone(&self) -> Box<DynKey> {
+    fn dyn_clone(&self) -> Box<dyn Key> {
         Box::new(*self)
     }
 }

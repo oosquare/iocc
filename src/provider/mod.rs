@@ -1,16 +1,13 @@
-use std::any::Any;
 use std::fmt::Debug;
 
-use crate::container::injector::{DynInjector, InjectorError, TypedInjector};
-use crate::container::Managed;
-use crate::key::{DynKey, TypedKey};
-
-pub type DynProvider = dyn Provider + Send + Sync + 'static;
+use crate::container::injector::{Injector, InjectorError, TypedInjector};
+use crate::container::{Managed, SharedManaged};
+use crate::key::{Key, TypedKey};
 
 pub trait Provider: Debug + Send + Sync + 'static {
-    fn dyn_provide(&self, injector: &mut DynInjector) -> Result<Box<dyn Any>, InjectorError>;
+    fn dyn_provide(&self, injector: &mut dyn Injector) -> Result<Box<dyn Managed>, InjectorError>;
 
-    fn dyn_key(&self) -> &DynKey;
+    fn dyn_key(&self) -> &dyn Key;
 }
 
 pub trait TypedProvider: Provider {
@@ -23,4 +20,38 @@ pub trait TypedProvider: Provider {
         I: TypedInjector + ?Sized;
 
     fn key(&self) -> &Self::Key;
+}
+
+impl<T: TypedProvider> Provider for T {
+    fn dyn_provide(&self, injector: &mut dyn Injector) -> Result<Box<dyn Managed>, InjectorError> {
+        self.provide(injector)
+            .map(|obj| -> Box<dyn Managed> { Box::new(obj) })
+    }
+
+    fn dyn_key(&self) -> &dyn Key {
+        self.key()
+    }
+}
+
+pub trait SharedPorvider: Provider {
+    fn dyn_provide_shared(
+        &self,
+        injector: &mut dyn Injector,
+    ) -> Result<Box<dyn SharedManaged>, InjectorError>;
+}
+
+pub trait TypedSharedProvider
+where
+    Self: SharedPorvider + TypedProvider<Output: SharedManaged>,
+{
+}
+
+impl<T: TypedSharedProvider> SharedPorvider for T {
+    fn dyn_provide_shared(
+        &self,
+        injector: &mut dyn Injector,
+    ) -> Result<Box<dyn SharedManaged>, InjectorError> {
+        self.provide(injector)
+            .map(|obj| -> Box<dyn SharedManaged> { Box::new(obj) })
+    }
 }

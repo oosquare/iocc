@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 use crate::container::Managed;
-use crate::key::{DynKey, TypedKey};
+use crate::key::{Key, TypedKey};
 
 pub struct KeyImpl<T, Q>
 where
@@ -101,12 +101,12 @@ where
     }
 }
 
-impl<T, Q> Borrow<DynKey> for KeyImpl<T, Q>
+impl<T, Q> Borrow<dyn Key> for KeyImpl<T, Q>
 where
     T: Managed,
     Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
 {
-    fn borrow(&self) -> &DynKey {
+    fn borrow(&self) -> &dyn Key {
         self
     }
 }
@@ -132,15 +132,13 @@ where
 mod tests {
     use any::TypeId;
 
-    use crate::key::DynKey;
-
     use super::*;
 
     #[test]
     fn key_impl_target_succeeds() {
-        let i32_key: Box<DynKey> = Box::new(KeyImpl::<i32, _>::new(()));
-        let i32_name1_key: Box<DynKey> = Box::new(KeyImpl::<i32, _>::new("name1"));
-        let i32_name2_key: Box<DynKey> = Box::new(KeyImpl::<i32, _>::new("name2"));
+        let i32_key: Box<dyn Key> = Box::new(KeyImpl::<i32, _>::new(()));
+        let i32_name1_key: Box<dyn Key> = Box::new(KeyImpl::<i32, _>::new("name1"));
+        let i32_name2_key: Box<dyn Key> = Box::new(KeyImpl::<i32, _>::new("name2"));
 
         assert_eq!(i32_key.target(), TypeId::of::<i32>());
         assert_eq!(i32_name1_key.target(), TypeId::of::<i32>());
@@ -160,9 +158,9 @@ mod tests {
 
     #[test]
     fn key_impl_eq_succeeds() {
-        let i32_key: Box<DynKey> = Box::new(KeyImpl::<i32, _>::new(()));
-        let i32_name1_key: Box<DynKey> = Box::new(KeyImpl::<i32, _>::new("name1"));
-        let i32_name2_key: Box<DynKey> = Box::new(KeyImpl::<i32, _>::new("name2"));
+        let i32_key: Box<dyn Key> = Box::new(KeyImpl::<i32, _>::new(()));
+        let i32_name1_key: Box<dyn Key> = Box::new(KeyImpl::<i32, _>::new("name1"));
+        let i32_name2_key: Box<dyn Key> = Box::new(KeyImpl::<i32, _>::new("name2"));
 
         assert_ne!(&i32_key, &i32_name1_key);
         assert_ne!(&i32_key, &i32_name2_key);

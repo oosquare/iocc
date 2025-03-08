@@ -6,13 +6,11 @@ use std::mem;
 
 use snafu::prelude::*;
 
-use crate::key::DynKey;
-use crate::provider::{DynProvider, TypedProvider};
-
-pub type DynRegistry = dyn Registry + Send + Sync + 'static;
+use crate::key::Key;
+use crate::provider::{Provider, TypedProvider};
 
 pub trait Registry: Send + Sync + 'static {
-    fn dyn_register(&mut self, provider: Box<DynProvider>) -> Result<(), RegistryError>;
+    fn dyn_register(&mut self, provider: Box<dyn Provider>) -> Result<(), RegistryError>;
 }
 
 pub trait TypedRegistry: Registry {
@@ -31,7 +29,7 @@ impl<T> TypedRegistry for T where T: Registry + ?Sized {}
 pub enum RegistryError {
     #[snafu(display("the key {key} already exists in the registry"))]
     #[non_exhaustive]
-    KeyDuplicated { key: Box<DynKey> },
+    KeyDuplicated { key: Box<dyn Key> },
 }
 
 impl Clone for RegistryError {
@@ -56,11 +54,11 @@ impl TypeSlotRegistry {
         }
     }
 
-    pub fn get<K>(&self, key: &K) -> Option<&DynProvider>
+    pub fn get<K>(&self, key: &K) -> Option<&dyn Provider>
     where
-        K: Borrow<DynKey> + ?Sized,
+        K: Borrow<dyn Key> + ?Sized,
     {
-        let key: &DynKey = key.borrow();
+        let key: &dyn Key = key.borrow();
         self.providers
             .get(&key.target())
             .and_then(|slot| slot.get(&key))
@@ -68,7 +66,7 @@ impl TypeSlotRegistry {
 }
 
 impl Registry for TypeSlotRegistry {
-    fn dyn_register(&mut self, provider: Box<DynProvider>) -> Result<(), RegistryError> {
+    fn dyn_register(&mut self, provider: Box<dyn Provider>) -> Result<(), RegistryError> {
         match self.providers.entry(provider.dyn_key().target()) {
             Entry::Vacant(vaccant) => {
                 vaccant.insert(provider.into());
@@ -86,12 +84,12 @@ impl Registry for TypeSlotRegistry {
 
 #[derive(Debug)]
 enum Slot {
-    Singleton(Box<DynProvider>),
-    Map(HashMap<Box<DynKey>, Box<DynProvider>>),
+    Singleton(Box<dyn Provider>),
+    Map(HashMap<Box<dyn Key>, Box<dyn Provider>>),
 }
 
 impl Slot {
-    fn insert(&mut self, provider: Box<DynProvider>) -> Option<Box<DynProvider>> {
+    fn insert(&mut self, provider: Box<dyn Provider>) -> Option<Box<dyn Provider>> {
         match self {
             Self::Singleton(entry) if entry.dyn_key() == provider.dyn_key() => {
                 let original = mem::replace(entry, provider);
@@ -114,9 +112,9 @@ impl Slot {
         }
     }
 
-    fn get<K>(&self, key: &K) -> Option<&DynProvider>
+    fn get<K>(&self, key: &K) -> Option<&dyn Provider>
     where
-        K: Borrow<DynKey>,
+        K: Borrow<dyn Key>,
     {
         match self {
             Self::Singleton(entry) if entry.dyn_key() != key.borrow() => None,
@@ -126,20 +124,19 @@ impl Slot {
     }
 }
 
-impl From<Box<DynProvider>> for Slot {
-    fn from(provider: Box<DynProvider>) -> Self {
+impl From<Box<dyn Provider>> for Slot {
+    fn from(provider: Box<dyn Provider>) -> Self {
         Self::Singleton(provider)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
     use std::fmt::Debug;
 
-    use crate::container::injector::{DynInjector, InjectorError, MockInjector, TypedInjector};
+    use crate::container::injector::{InjectorError, MockInjector, TypedInjector};
     use crate::key::{self, KeyImpl};
-    use crate::provider::Provider;
+    use crate::util::any::Downcast;
 
     use super::*;
 
@@ -166,9 +163,9 @@ mod tests {
         assert!(registry.register(TestProvider::new(42i32)).is_ok());
 
         let provider = registry.get(&key::of::<i32>()).unwrap();
-        assert_eq!(provider.dyn_key(), &key::of::<i32>() as &DynKey);
+        assert_eq!(provider.dyn_key(), &key::of::<i32>() as &dyn Key);
         let res = provider.dyn_provide(&mut MockInjector::new()).unwrap();
-        assert_eq!(*res.downcast::<i32>().unwrap(), 42);
+        assert_eq!(*res.downcast::<i32>().unwrap_or(Box::new(0)), 42);
 
         assert!(registry.get(&key::of::<&str>()).is_none());
     }
@@ -191,19 +188,6 @@ mod tests {
                 value,
                 key: key::of::<T>(),
             }
-        }
-    }
-
-    impl<T> Provider for TestProvider<T>
-    where
-        T: Clone + Debug + Send + Sync + 'static,
-    {
-        fn dyn_provide(&self, _injector: &mut DynInjector) -> Result<Box<dyn Any>, InjectorError> {
-            Ok(Box::new(self.value.clone()))
-        }
-
-        fn dyn_key(&self) -> &DynKey {
-            &self.key
         }
     }
 
