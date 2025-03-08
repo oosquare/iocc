@@ -5,10 +5,9 @@ use std::any::TypeId;
 use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
 
-use as_any::AsAny;
-
 use crate::container::Managed;
 use crate::key::hash::DynHash;
+use crate::util::any::AsAny;
 
 pub use crate::key::implementation::KeyImpl;
 
