@@ -33,7 +33,7 @@ impl<T: TypedProvider> Provider for T {
     }
 }
 
-pub trait SharedPorvider: Provider {
+pub trait SharedProvider: Provider {
     fn dyn_provide_shared(
         &self,
         injector: &mut dyn Injector,
@@ -42,11 +42,11 @@ pub trait SharedPorvider: Provider {
 
 pub trait TypedSharedProvider
 where
-    Self: SharedPorvider + TypedProvider<Output: SharedManaged>,
+    Self: SharedProvider + TypedProvider<Output: SharedManaged>,
 {
 }
 
-impl<T: TypedSharedProvider> SharedPorvider for T {
+impl<T: TypedSharedProvider> SharedProvider for T {
     fn dyn_provide_shared(
         &self,
         injector: &mut dyn Injector,

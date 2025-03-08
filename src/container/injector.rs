@@ -1,13 +1,12 @@
-use std::any::Any;
-
 use snafu::prelude::*;
 
 use crate::container::Managed;
 use crate::key::{Key, TypedKey};
+use crate::util::any::Downcast;
 
 #[cfg_attr(test, mockall::automock)]
 pub trait Injector: Send + Sync + 'static {
-    fn dyn_get(&mut self, key: &dyn Key) -> Result<Box<dyn Any>, InjectorError>;
+    fn dyn_get(&mut self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError>;
 }
 
 pub trait TypedInjector: Injector {

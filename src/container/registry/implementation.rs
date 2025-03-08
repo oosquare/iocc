@@ -4,43 +4,10 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::mem;
 
-use snafu::prelude::*;
-
+use crate::container::registry::inner::{InnerRegistry, VarProvider};
+use crate::container::registry::RegistryError;
 use crate::key::Key;
-use crate::provider::{Provider, TypedProvider};
-
-pub trait Registry: Send + Sync + 'static {
-    fn dyn_register(&mut self, provider: Box<dyn Provider>) -> Result<(), RegistryError>;
-}
-
-pub trait TypedRegistry: Registry {
-    fn register<P>(&mut self, provider: P) -> Result<(), RegistryError>
-    where
-        P: TypedProvider,
-    {
-        self.dyn_register(Box::new(provider))
-    }
-}
-
-impl<T> TypedRegistry for T where T: Registry + ?Sized {}
-
-#[derive(Debug, Snafu)]
-#[non_exhaustive]
-pub enum RegistryError {
-    #[snafu(display("the key {key} already exists in the registry"))]
-    #[non_exhaustive]
-    KeyDuplicated { key: Box<dyn Key> },
-}
-
-impl Clone for RegistryError {
-    fn clone(&self) -> Self {
-        match self {
-            Self::KeyDuplicated { key } => Self::KeyDuplicated {
-                key: key.dyn_clone(),
-            },
-        }
-    }
-}
+use crate::provider::{Provider, SharedProvider};
 
 #[derive(Debug)]
 pub struct TypeSlotRegistry {
@@ -54,19 +21,7 @@ impl TypeSlotRegistry {
         }
     }
 
-    pub fn get<K>(&self, key: &K) -> Option<&dyn Provider>
-    where
-        K: Borrow<dyn Key> + ?Sized,
-    {
-        let key: &dyn Key = key.borrow();
-        self.providers
-            .get(&key.target())
-            .and_then(|slot| slot.get(&key))
-    }
-}
-
-impl Registry for TypeSlotRegistry {
-    fn dyn_register(&mut self, provider: Box<dyn Provider>) -> Result<(), RegistryError> {
+    fn register_impl(&mut self, provider: VarProvider) -> Result<(), RegistryError> {
         match self.providers.entry(provider.dyn_key().target()) {
             Entry::Vacant(vaccant) => {
                 vaccant.insert(provider.into());
@@ -82,14 +37,33 @@ impl Registry for TypeSlotRegistry {
     }
 }
 
+impl InnerRegistry for TypeSlotRegistry {
+    fn dyn_register(&mut self, provider: Box<dyn Provider>) -> Result<(), RegistryError> {
+        self.register_impl(provider.into())
+    }
+
+    fn dyn_register_shared(
+        &mut self,
+        provider: Box<dyn SharedProvider>,
+    ) -> Result<(), RegistryError> {
+        self.register_impl(provider.into())
+    }
+
+    fn get(&self, key: &dyn Key) -> Option<&VarProvider> {
+        self.providers
+            .get(&key.target())
+            .and_then(|slot| slot.get(&key))
+    }
+}
+
 #[derive(Debug)]
 enum Slot {
-    Singleton(Box<dyn Provider>),
-    Map(HashMap<Box<dyn Key>, Box<dyn Provider>>),
+    Singleton(VarProvider),
+    Map(HashMap<Box<dyn Key>, VarProvider>),
 }
 
 impl Slot {
-    fn insert(&mut self, provider: Box<dyn Provider>) -> Option<Box<dyn Provider>> {
+    fn insert(&mut self, provider: VarProvider) -> Option<VarProvider> {
         match self {
             Self::Singleton(entry) if entry.dyn_key() == provider.dyn_key() => {
                 let original = mem::replace(entry, provider);
@@ -112,20 +86,20 @@ impl Slot {
         }
     }
 
-    fn get<K>(&self, key: &K) -> Option<&dyn Provider>
+    fn get<K>(&self, key: &K) -> Option<&VarProvider>
     where
         K: Borrow<dyn Key>,
     {
         match self {
             Self::Singleton(entry) if entry.dyn_key() != key.borrow() => None,
-            Self::Singleton(entry) => Some(&**entry),
-            Self::Map(entries) => entries.get(key.borrow()).map(AsRef::as_ref),
+            Self::Singleton(entry) => Some(entry),
+            Self::Map(entries) => entries.get(key.borrow()),
         }
     }
 }
 
-impl From<Box<dyn Provider>> for Slot {
-    fn from(provider: Box<dyn Provider>) -> Self {
+impl From<VarProvider> for Slot {
+    fn from(provider: VarProvider) -> Self {
         Self::Singleton(provider)
     }
 }
@@ -133,9 +107,12 @@ impl From<Box<dyn Provider>> for Slot {
 #[cfg(test)]
 mod tests {
     use std::fmt::Debug;
+    use std::sync::Arc;
 
     use crate::container::injector::{InjectorError, MockInjector, TypedInjector};
+    use crate::container::registry::inner::TypedInnerRegistry;
     use crate::key::{self, KeyImpl};
+    use crate::provider::{TypedProvider, TypedSharedProvider};
     use crate::util::any::Downcast;
 
     use super::*;
@@ -145,6 +122,17 @@ mod tests {
         let mut registry = TypeSlotRegistry::new();
         assert!(registry.register(TestProvider::new(42i32)).is_ok());
         assert!(registry.register(TestProvider::new("str")).is_ok());
+    }
+
+    #[test]
+    fn type_slot_registry_register_shared_succeeds() {
+        let mut registry = TypeSlotRegistry::new();
+        assert!(registry
+            .register_shared(TestProvider::new(Arc::new(42i32)))
+            .is_ok());
+        assert!(registry
+            .register_shared(TestProvider::new(Arc::new("str")))
+            .is_ok());
     }
 
     #[test]
@@ -158,16 +146,38 @@ mod tests {
     }
 
     #[test]
-    fn type_slot_registry_get_succeeds() {
+    fn type_slot_registry_get_succeeds_when_provider_is_owned() {
         let mut registry = TypeSlotRegistry::new();
         assert!(registry.register(TestProvider::new(42i32)).is_ok());
 
         let provider = registry.get(&key::of::<i32>()).unwrap();
         assert_eq!(provider.dyn_key(), &key::of::<i32>() as &dyn Key);
-        let res = provider.dyn_provide(&mut MockInjector::new()).unwrap();
+        let res = provider
+            .as_owned()
+            .unwrap()
+            .dyn_provide(&mut MockInjector::new())
+            .unwrap();
         assert_eq!(*res.downcast::<i32>().unwrap_or(Box::new(0)), 42);
+    }
 
-        assert!(registry.get(&key::of::<&str>()).is_none());
+    #[test]
+    fn type_slot_registry_get_succeeds_when_provider_is_shared() {
+        let mut registry = TypeSlotRegistry::new();
+        assert!(registry
+            .register_shared(TestProvider::new(Arc::new(42i32)))
+            .is_ok());
+
+        let provider = registry.get(&key::of::<Arc<i32>>()).unwrap();
+        assert_eq!(provider.dyn_key(), &key::of::<Arc<i32>>() as &dyn Key);
+        let res = provider
+            .as_shared()
+            .unwrap()
+            .dyn_provide(&mut MockInjector::new())
+            .unwrap();
+        assert_eq!(
+            **res.downcast::<Arc<i32>>().unwrap_or(Box::new(Arc::new(0))),
+            42
+        );
     }
 
     #[derive(Debug)]
@@ -210,4 +220,6 @@ mod tests {
             &self.key
         }
     }
+
+    impl<T> TypedSharedProvider for TestProvider<Arc<T>> where T: Debug + Send + Sync + 'static {}
 }
