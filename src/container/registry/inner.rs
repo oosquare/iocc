@@ -10,7 +10,7 @@ pub trait InnerRegistry: Send + Sync + 'static {
         provider: Box<dyn SharedProvider>,
     ) -> Result<(), RegistryError>;
 
-    fn get(&self, key: &dyn Key) -> Option<&VarProvider>;
+    fn get(&mut self, key: &dyn Key) -> Option<&mut VarProvider>;
 }
 
 pub trait TypedInnerRegistry: InnerRegistry {
@@ -45,17 +45,17 @@ impl VarProvider {
         }
     }
 
-    pub fn as_shared(&self) -> Option<&dyn SharedProvider> {
+    pub fn as_shared(&mut self) -> Option<&mut dyn SharedProvider> {
         if let Self::Shared(v) = self {
-            Some(v.as_ref())
+            Some(v.as_mut())
         } else {
             None
         }
     }
 
-    pub fn as_owned(&self) -> Option<&dyn Provider> {
+    pub fn as_owned(&mut self) -> Option<&mut dyn Provider> {
         if let Self::Owned(v) = self {
-            Some(v.as_ref())
+            Some(v.as_mut())
         } else {
             None
         }

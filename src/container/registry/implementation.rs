@@ -49,9 +49,9 @@ impl InnerRegistry for TypeSlotRegistry {
         self.register_impl(provider.into())
     }
 
-    fn get(&self, key: &dyn Key) -> Option<&VarProvider> {
+    fn get(&mut self, key: &dyn Key) -> Option<&mut VarProvider> {
         self.providers
-            .get(&key.target())
+            .get_mut(&key.target())
             .and_then(|slot| slot.get(&key))
     }
 }
@@ -86,14 +86,14 @@ impl Slot {
         }
     }
 
-    fn get<K>(&self, key: &K) -> Option<&VarProvider>
+    fn get<K>(&mut self, key: &K) -> Option<&mut VarProvider>
     where
         K: Borrow<dyn Key>,
     {
         match self {
             Self::Singleton(entry) if entry.dyn_key() != key.borrow() => None,
             Self::Singleton(entry) => Some(entry),
-            Self::Map(entries) => entries.get(key.borrow()),
+            Self::Map(entries) => entries.get_mut(key.borrow()),
         }
     }
 }
@@ -209,7 +209,7 @@ mod tests {
 
         type Output = T;
 
-        fn provide<I>(&self, _injector: &mut I) -> Result<Self::Output, InjectorError>
+        fn provide<I>(&mut self, _injector: &mut I) -> Result<Self::Output, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {

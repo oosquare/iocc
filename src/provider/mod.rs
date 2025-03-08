@@ -5,7 +5,10 @@ use crate::container::{Managed, SharedManaged};
 use crate::key::{Key, TypedKey};
 
 pub trait Provider: Debug + Send + Sync + 'static {
-    fn dyn_provide(&self, injector: &mut dyn Injector) -> Result<Box<dyn Managed>, InjectorError>;
+    fn dyn_provide(
+        &mut self,
+        injector: &mut dyn Injector,
+    ) -> Result<Box<dyn Managed>, InjectorError>;
 
     fn dyn_key(&self) -> &dyn Key;
 }
@@ -15,7 +18,7 @@ pub trait TypedProvider: Provider {
 
     type Output: Managed;
 
-    fn provide<I>(&self, injector: &mut I) -> Result<Self::Output, InjectorError>
+    fn provide<I>(&mut self, injector: &mut I) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized;
 
@@ -23,7 +26,10 @@ pub trait TypedProvider: Provider {
 }
 
 impl<T: TypedProvider> Provider for T {
-    fn dyn_provide(&self, injector: &mut dyn Injector) -> Result<Box<dyn Managed>, InjectorError> {
+    fn dyn_provide(
+        &mut self,
+        injector: &mut dyn Injector,
+    ) -> Result<Box<dyn Managed>, InjectorError> {
         self.provide(injector)
             .map(|obj| -> Box<dyn Managed> { Box::new(obj) })
     }
@@ -35,7 +41,7 @@ impl<T: TypedProvider> Provider for T {
 
 pub trait SharedProvider: Provider {
     fn dyn_provide_shared(
-        &self,
+        &mut self,
         injector: &mut dyn Injector,
     ) -> Result<Box<dyn SharedManaged>, InjectorError>;
 }
@@ -48,7 +54,7 @@ where
 
 impl<T: TypedSharedProvider> SharedProvider for T {
     fn dyn_provide_shared(
-        &self,
+        &mut self,
         injector: &mut dyn Injector,
     ) -> Result<Box<dyn SharedManaged>, InjectorError> {
         self.provide(injector)
