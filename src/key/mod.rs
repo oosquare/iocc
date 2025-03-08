@@ -1,4 +1,3 @@
-mod hash;
 mod implementation;
 
 use std::any::TypeId;
@@ -6,8 +5,8 @@ use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
 
 use crate::container::Managed;
-use crate::key::hash::DynHash;
 use crate::util::any::AsAny;
+use crate::util::hash::DynHash;
 
 pub use crate::key::implementation::KeyImpl;
 
@@ -31,34 +30,6 @@ impl Eq for dyn Key {}
 impl Hash for dyn Key {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.dyn_hash(state);
-    }
-}
-
-impl PartialEq for dyn Key + Send {
-    fn eq(&self, other: &Self) -> bool {
-        <dyn Key>::eq(self, other)
-    }
-}
-
-impl Eq for dyn Key + Send {}
-
-impl Hash for dyn Key + Send {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        <dyn Key>::hash(self, state);
-    }
-}
-
-impl PartialEq for dyn Key + Send + Sync {
-    fn eq(&self, other: &Self) -> bool {
-        <dyn Key>::eq(self, other)
-    }
-}
-
-impl Eq for dyn Key + Send + Sync {}
-
-impl Hash for dyn Key + Send + Sync {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        <dyn Key>::hash(self, state);
     }
 }
 
