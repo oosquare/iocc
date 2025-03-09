@@ -1,3 +1,6 @@
+use std::any;
+use std::error::Error;
+
 use snafu::prelude::*;
 
 use crate::container::Managed;
@@ -16,9 +19,12 @@ pub trait TypedInjector: Injector {
     {
         self.dyn_get(key)
             .and_then(|boxed| {
-                boxed
-                    .downcast::<K::Target>()
-                    .map_err(|_| InjectorError::TypeMismatched)
+                boxed.downcast::<K::Target>().map_err(|_| {
+                    TypeMismatchedSnafu {
+                        expected_type: any::type_name::<K::Target>(),
+                    }
+                    .build()
+                })
             })
             .map(|boxed| *boxed)
     }
@@ -52,19 +58,14 @@ pub enum InjectorError {
     CyclicDependency { key: Box<dyn Key> },
     #[snafu(display("could not downcast the object to the given concrete type"))]
     #[non_exhaustive]
-    TypeMismatched,
-}
-
-impl Clone for InjectorError {
-    fn clone(&self) -> Self {
-        match self {
-            Self::NotFound { key } => Self::NotFound {
-                key: key.dyn_clone(),
-            },
-            Self::CyclicDependency { key } => Self::CyclicDependency {
-                key: key.dyn_clone(),
-            },
-            Self::TypeMismatched => Self::TypeMismatched,
-        }
-    }
+    TypeMismatched { expected_type: String },
+    #[snafu(display("the instance or provider of {key} is already consumed"))]
+    #[non_exhaustive]
+    Consumed { key: Box<dyn Key> },
+    #[snafu(display("could not construct the object {key} due to the inner error"))]
+    #[non_exhaustive]
+    Inner {
+        key: Box<dyn Key>,
+        source: Box<dyn Error + Send + Sync>,
+    },
 }
