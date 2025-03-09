@@ -50,7 +50,7 @@ impl TypedInjector for dyn Injector {
 #[derive(Debug, Snafu)]
 #[non_exhaustive]
 pub enum InjectorError {
-    #[snafu(display("could not found the object identified by the given key {key}"))]
+    #[snafu(display("could not find the object identified by the given key {key}"))]
     #[non_exhaustive]
     NotFound { key: Box<dyn Key> },
     #[snafu(display("could not construct the object {key} which depends on itself somehow"))]
@@ -58,13 +58,19 @@ pub enum InjectorError {
     CyclicDependency { key: Box<dyn Key> },
     #[snafu(display("could not downcast the object to the given concrete type"))]
     #[non_exhaustive]
-    TypeMismatched { expected_type: String },
+    TypeMismatched { expected_type: &'static str },
     #[snafu(display("the instance or provider of {key} is already consumed"))]
     #[non_exhaustive]
     Consumed { key: Box<dyn Key> },
-    #[snafu(display("could not construct the object {key} due to the inner error"))]
+    #[snafu(display("could not get the object {key} from the adapter's inner"))]
+    AdapterInner {
+        key: Box<dyn Key>,
+        #[snafu(source(from(InjectorError, Box::new)))]
+        source: Box<InjectorError>,
+    },
+    #[snafu(display("could not construct the object {key}"))]
     #[non_exhaustive]
-    Inner {
+    ObjectConstruction {
         key: Box<dyn Key>,
         source: Box<dyn Error + Send + Sync>,
     },
