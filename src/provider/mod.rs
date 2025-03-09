@@ -1,3 +1,5 @@
+pub mod instance;
+
 use std::fmt::Debug;
 
 use crate::container::injector::{Injector, InjectorError, TypedInjector};
