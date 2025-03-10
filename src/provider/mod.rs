@@ -1,5 +1,6 @@
 pub mod adapter;
 pub mod closure;
+pub mod component;
 pub mod instance;
 
 use std::fmt::Debug;

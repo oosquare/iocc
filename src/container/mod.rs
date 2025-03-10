@@ -15,7 +15,7 @@ pub trait SharedManaged: Managed {
 
 impl<T> SharedManaged for Arc<T>
 where
-    T: Send + Sync + 'static,
+    T: Send + Sync + ?Sized + 'static,
 {
     fn dyn_clone(&self) -> Box<dyn SharedManaged> {
         Box::new(Arc::clone(self))
