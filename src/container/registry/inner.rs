@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::container::registry::RegistryError;
 use crate::key::Key;
 use crate::provider::{Provider, SharedProvider, TypedProvider, TypedSharedProvider};

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::any::TypeId;
 use std::borrow::Borrow;
 use std::collections::hash_map::Entry;

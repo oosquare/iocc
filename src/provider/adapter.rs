@@ -115,7 +115,7 @@ where
             self.inner.provide(injector)
         } else {
             Err(InjectorError::Consumed {
-                key: Box::new(self.key().clone()),
+                key: Box::new(*self.key()),
             })
         }
     }

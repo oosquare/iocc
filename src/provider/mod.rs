@@ -1,4 +1,5 @@
 pub mod adapter;
+pub mod closure;
 pub mod instance;
 
 use std::fmt::Debug;

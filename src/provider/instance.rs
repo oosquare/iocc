@@ -110,7 +110,7 @@ where
         match self.instance.take() {
             Some(instance) => Ok(instance),
             None => Err(InjectorError::Consumed {
-                key: Box::new(self.key().clone()),
+                key: Box::new(self.key),
             }),
         }
     }
