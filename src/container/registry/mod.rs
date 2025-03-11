@@ -1,3 +1,5 @@
+mod provider_map;
+
 use std::error::Error;
 
 use snafu::prelude::*;

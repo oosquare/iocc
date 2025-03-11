@@ -1,3 +1,5 @@
+mod object_map;
+
 use std::any;
 use std::error::Error;
 
