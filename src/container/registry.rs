@@ -1,6 +1,3 @@
-mod implementation;
-mod inner;
-
 use snafu::prelude::*;
 
 use crate::key::Key;

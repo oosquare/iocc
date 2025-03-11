@@ -1,5 +1,6 @@
 pub mod injector;
 mod object_map;
+mod provider_map;
 pub mod registry;
 
 use std::sync::Arc;
