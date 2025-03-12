@@ -1,3 +1,4 @@
+mod configurer;
 mod provider_map;
 
 use std::error::Error;
@@ -12,11 +13,7 @@ pub trait Configurer: Send + Sync + 'static {
 
     fn register_shared(&mut self, provider: Box<dyn SharedProvider>);
 
-    fn report_error(&mut self, err: Box<dyn Error + Send + Sync>);
-
-    fn finish(self) -> Result<(), Vec<RegistryError>>
-    where
-        Self: Sized;
+    fn report_module_error(&mut self, module: &'static str, err: Box<dyn Error + Send + Sync>);
 }
 
 #[derive(Debug, Snafu)]

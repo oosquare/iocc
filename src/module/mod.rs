@@ -1,11 +1,12 @@
 use std::error::Error;
 
 use crate::container::registry::Configurer;
+use crate::util::any::AsAny;
 
-pub trait Module: 'static {
+pub trait Module: AsAny + 'static {
     fn setup(&self, configurer: &mut dyn Configurer) {
         if let Err(err) = self.configure(configurer) {
-            configurer.report_error(err);
+            configurer.report_module_error(self.type_name(), err);
         }
     }
 
