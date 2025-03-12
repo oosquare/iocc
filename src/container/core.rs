@@ -74,6 +74,7 @@ impl Injector for CoreContainer {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::Infallible;
     use std::sync::Arc;
 
     use crate::component::Component;
@@ -92,14 +93,16 @@ mod tests {
     impl Component for A {
         type Output = Arc<A>;
 
-        fn construct<I>(injector: &mut I) -> Result<Self, InjectorError>
+        type Error = Infallible;
+
+        fn construct<I>(injector: &mut I) -> Result<Result<Self, Self::Error>, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {
-            Ok(A {
+            Ok(Ok(A {
                 a: injector.get(&key::of::<i32>())?,
                 b: injector.get(&key::of::<&'static str>())?,
-            })
+            }))
         }
 
         fn post_process(self) -> Self::Output {
@@ -115,13 +118,15 @@ mod tests {
     impl Component for B {
         type Output = Box<B>;
 
-        fn construct<I>(injector: &mut I) -> Result<Self, InjectorError>
+        type Error = Infallible;
+
+        fn construct<I>(injector: &mut I) -> Result<Result<Self, Self::Error>, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {
-            Ok(B {
+            Ok(Ok(B {
                 _recursive: injector.get(&key::of::<Box<B>>())?,
-            })
+            }))
         }
 
         fn post_process(self) -> Self::Output {

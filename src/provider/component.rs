@@ -63,7 +63,14 @@ where
     where
         I: TypedInjector + ?Sized,
     {
-        C::construct(injector).map(C::post_process)
+        match C::construct(injector) {
+            Ok(Ok(obj)) => Ok(obj.post_process()),
+            Ok(Err(err)) => Err(InjectorError::ObjectConstruction {
+                key: Box::new(self.key),
+                source: err.into(),
+            }),
+            Err(err) => Err(err),
+        }
     }
 
     fn key(&self) -> &Self::Key {
@@ -80,6 +87,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::convert::Infallible;
     use std::sync::Arc;
 
     use crate::container::injector::MockInjector;
@@ -97,11 +105,13 @@ mod tests {
     impl Component for Impl {
         type Output = Arc<dyn Abstract>;
 
-        fn construct<I>(_injector: &mut I) -> Result<Self, InjectorError>
+        type Error = Infallible;
+
+        fn construct<I>(_injector: &mut I) -> Result<Result<Self, Self::Error>, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {
-            Ok(Impl)
+            Ok(Ok(Impl))
         }
 
         fn post_process(self) -> Self::Output {
