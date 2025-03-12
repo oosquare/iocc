@@ -1,4 +1,4 @@
-mod object_map;
+pub(super) mod object_map;
 
 use std::any;
 use std::error::Error;
@@ -65,6 +65,7 @@ pub enum InjectorError {
     #[non_exhaustive]
     Consumed { key: Box<dyn Key> },
     #[snafu(display("could not get the object {key} from the adapter's inner"))]
+    #[non_exhaustive]
     AdapterInner {
         key: Box<dyn Key>,
         #[snafu(source(from(InjectorError, Box::new)))]

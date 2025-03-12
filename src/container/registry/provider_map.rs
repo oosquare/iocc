@@ -26,6 +26,13 @@ impl ProviderMap {
         self.insert_impl(provider.into())
     }
 
+    pub fn move_out(&mut self, key: &dyn Key) -> Option<ProviderEntry> {
+        self.providers
+            .get_mut(&key.target())
+            .and_then(|slot| slot.get(key))
+            .map(|entry| mem::replace(entry, ProviderEntry::TemporaryMoved(key.dyn_clone())))
+    }
+
     pub fn get(&mut self, key: &dyn Key) -> Option<&mut ProviderEntry> {
         self.providers
             .get_mut(&key.target())
@@ -92,11 +99,13 @@ impl From<ProviderEntry> for ProviderSlot {
 pub enum ProviderEntry {
     Shared(Box<dyn SharedProvider>),
     Owned(Box<dyn Provider>),
+    TemporaryMoved(Box<dyn Key>),
 }
 
 impl ProviderEntry {
     pub fn dyn_key(&self) -> &dyn Key {
         match self {
+            Self::TemporaryMoved(k) => k.as_ref(),
             Self::Shared(s) => s.dyn_key(),
             Self::Owned(s) => s.dyn_key(),
         }

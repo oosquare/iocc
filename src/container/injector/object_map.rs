@@ -3,7 +3,7 @@ use std::any::TypeId;
 use std::collections::HashMap;
 use std::mem;
 
-use crate::container::SharedManaged;
+use crate::container::{Managed, SharedManaged};
 use crate::key::Key;
 
 pub struct ObjectMap {
@@ -17,24 +17,17 @@ impl ObjectMap {
         }
     }
 
-    pub fn insert_intermediate(&mut self, key: Box<dyn Key>) -> Option<ObjectEntry> {
-        self.insert_impl(key, ObjectEntry::Intermediate)
-    }
-
-    pub fn insert_constructed(
+    pub fn insert(
         &mut self,
         key: Box<dyn Key>,
         object: Box<dyn SharedManaged>,
     ) -> Option<ObjectEntry> {
-        self.insert_impl(key, ObjectEntry::Constructed(object))
-    }
-
-    fn insert_impl(&mut self, key: Box<dyn Key>, entry: ObjectEntry) -> Option<ObjectEntry> {
         let target = key.target();
         if let Some(slot) = self.objects.get_mut(&target) {
-            slot.insert(key, entry)
+            slot.insert(key, ObjectEntry(object))
         } else {
-            self.objects.insert(target, Slot::new(key, entry));
+            self.objects
+                .insert(target, Slot::new(key, ObjectEntry(object)));
             None
         }
     }
@@ -107,9 +100,12 @@ impl Slot {
     }
 }
 
-pub enum ObjectEntry {
-    Intermediate,
-    Constructed(Box<dyn SharedManaged>),
+pub struct ObjectEntry(Box<dyn SharedManaged>);
+
+impl ObjectEntry {
+    pub fn clone_managed(&self) -> Box<dyn Managed> {
+        self.0.dyn_clone().upcast_managed()
+    }
 }
 
 #[cfg(test)]
@@ -126,19 +122,11 @@ mod tests {
         let mut map = ObjectMap::new();
 
         assert!(map
-            .insert_intermediate(Box::new(key::of::<i32>()))
+            .insert(Box::new(key::of::<Arc<i32>>()), Box::new(Arc::new(42i32)))
             .is_none());
 
-        assert!(map
-            .insert_constructed(Box::new(key::of::<i32>()), Box::new(Arc::new(42i32)))
-            .is_some());
-
-        match map.get(&key::of::<i32>()).unwrap() {
-            ObjectEntry::Constructed(obj) => {
-                assert_eq!(**obj.downcast_ref::<Arc<i32>>().unwrap(), 42)
-            }
-            _ => unreachable!(),
-        }
+        let obj = &map.get(&key::of::<Arc<i32>>()).unwrap().0;
+        assert_eq!(**obj.downcast_ref::<Arc<i32>>().unwrap(), 42);
     }
 
     #[test]
@@ -146,10 +134,10 @@ mod tests {
         let mut map = ObjectMap::new();
 
         assert!(map
-            .insert_intermediate(Box::new(key::of::<i32>()))
+            .insert(Box::new(key::of::<Arc<i32>>()), Box::new(Arc::new(42i32)))
             .is_none());
 
-        assert!(map.remove(&key::of::<i32>()).is_some());
-        assert!(map.remove(&key::of::<i32>()).is_none());
+        assert!(map.remove(&key::of::<Arc<i32>>()).is_some());
+        assert!(map.remove(&key::of::<Arc<i32>>()).is_none());
     }
 }

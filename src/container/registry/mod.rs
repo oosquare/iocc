@@ -1,12 +1,17 @@
-mod configurer;
-mod provider_map;
+pub(super) mod configurer;
+pub(super) mod provider_map;
 
 use std::error::Error;
 
 use snafu::prelude::*;
 
 use crate::key::Key;
+use crate::module::Module;
 use crate::provider::{Provider, SharedProvider};
+
+pub trait Registry: Sized + Send + Sync + 'static {
+    fn init<M: Module>(module: M) -> Result<Self, Vec<RegistryError>>;
+}
 
 pub trait Configurer: Send + Sync + 'static {
     fn register(&mut self, provider: Box<dyn Provider>);
