@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::mem;
@@ -111,16 +110,9 @@ impl ProviderEntry {
         }
     }
 
+    #[cfg(test)]
     pub fn as_shared(&mut self) -> Option<&mut dyn SharedProvider> {
         if let Self::Shared(v) = self {
-            Some(v.as_mut())
-        } else {
-            None
-        }
-    }
-
-    pub fn as_owned(&mut self) -> Option<&mut dyn Provider> {
-        if let Self::Owned(v) = self {
             Some(v.as_mut())
         } else {
             None

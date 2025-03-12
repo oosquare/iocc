@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::mem;
@@ -30,12 +29,6 @@ impl ObjectMap {
                 .insert(target, Slot::new(key, ObjectEntry(object)));
             None
         }
-    }
-
-    pub fn remove(&mut self, key: &dyn Key) -> Option<ObjectEntry> {
-        self.objects
-            .get_mut(&key.target())
-            .and_then(|slot| slot.remove(key))
     }
 
     pub fn get(&self, key: &dyn Key) -> Option<&ObjectEntry> {
@@ -78,19 +71,6 @@ impl Slot {
         }
     }
 
-    fn remove(&mut self, key: &dyn Key) -> Option<ObjectEntry> {
-        match self {
-            Self::Singleton(k, _) if k.as_ref() != key => None,
-            Self::Singleton(_, _) => {
-                let Self::Singleton(_, e) = mem::replace(self, Self::Map(HashMap::new())) else {
-                    unreachable!("`self` should match `Self::Singleton(_, _)`")
-                };
-                Some(e)
-            }
-            Self::Map(entries) => entries.remove(key),
-        }
-    }
-
     fn get(&self, key: &dyn Key) -> Option<&ObjectEntry> {
         match self {
             Self::Singleton(k, _) if k.as_ref() != key => None,
@@ -127,17 +107,5 @@ mod tests {
 
         let obj = &map.get(&key::of::<Arc<i32>>()).unwrap().0;
         assert_eq!(**obj.downcast_ref::<Arc<i32>>().unwrap(), 42);
-    }
-
-    #[test]
-    fn object_map_remove_succeeds() {
-        let mut map = ObjectMap::new();
-
-        assert!(map
-            .insert(Box::new(key::of::<Arc<i32>>()), Box::new(Arc::new(42i32)))
-            .is_none());
-
-        assert!(map.remove(&key::of::<Arc<i32>>()).is_some());
-        assert!(map.remove(&key::of::<Arc<i32>>()).is_none());
     }
 }
