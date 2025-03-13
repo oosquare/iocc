@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use crate::container::injector::object_map::ObjectMap;
 use crate::container::injector::{Injector, InjectorError};
@@ -21,22 +22,19 @@ impl CoreContainer {
             return Ok(entry.clone_managed());
         }
 
-        match self.provider_map.move_out(key) {
+        match self.provider_map.get(key) {
             Some(ProviderEntry::Owned(provider)) => {
-                let res = provider.dyn_provide(self);
-                self.provider_map.insert(provider);
-                res
+                let provider = Arc::clone(&provider);
+                provider.dyn_provide(self)
             }
             Some(ProviderEntry::Shared(provider)) => {
+                let provider = Arc::clone(&provider);
                 let res = provider.dyn_provide_shared(self);
                 if let Ok(object) = res.as_ref() {
                     self.object_map.insert(key.dyn_clone(), object.dyn_clone());
                 }
                 res.map(SharedManaged::upcast_managed)
             }
-            Some(ProviderEntry::TemporaryMoved(key)) => Err(InjectorError::CyclicDependency {
-                key: key.dyn_clone(),
-            }),
             None => Err(InjectorError::NotFound {
                 key: key.dyn_clone(),
             }),

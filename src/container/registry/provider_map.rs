@@ -1,6 +1,7 @@
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::mem;
+use std::sync::Arc;
 
 use crate::key::Key;
 use crate::provider::{Provider, SharedProvider};
@@ -25,16 +26,9 @@ impl ProviderMap {
         self.insert_impl(provider.into())
     }
 
-    pub fn move_out(&mut self, key: &dyn Key) -> Option<ProviderEntry> {
+    pub fn get(&self, key: &dyn Key) -> Option<&ProviderEntry> {
         self.providers
-            .get_mut(&key.target())
-            .and_then(|slot| slot.get(key))
-            .map(|entry| mem::replace(entry, ProviderEntry::TemporaryMoved(key.dyn_clone())))
-    }
-
-    pub fn get(&mut self, key: &dyn Key) -> Option<&mut ProviderEntry> {
-        self.providers
-            .get_mut(&key.target())
+            .get(&key.target())
             .and_then(|slot| slot.get(key))
     }
 
@@ -79,11 +73,11 @@ impl ProviderSlot {
         }
     }
 
-    fn get(&mut self, key: &dyn Key) -> Option<&mut ProviderEntry> {
+    fn get(&self, key: &dyn Key) -> Option<&ProviderEntry> {
         match self {
             Self::Singleton(entry) if entry.dyn_key() != key => None,
             Self::Singleton(entry) => Some(entry),
-            Self::Map(entries) => entries.get_mut(key),
+            Self::Map(entries) => entries.get(key),
         }
     }
 }
@@ -96,24 +90,22 @@ impl From<ProviderEntry> for ProviderSlot {
 
 #[derive(Debug)]
 pub enum ProviderEntry {
-    Shared(Box<dyn SharedProvider>),
-    Owned(Box<dyn Provider>),
-    TemporaryMoved(Box<dyn Key>),
+    Shared(Arc<dyn SharedProvider>),
+    Owned(Arc<dyn Provider>),
 }
 
 impl ProviderEntry {
     pub fn dyn_key(&self) -> &dyn Key {
         match self {
-            Self::TemporaryMoved(k) => k.as_ref(),
             Self::Shared(s) => s.dyn_key(),
             Self::Owned(s) => s.dyn_key(),
         }
     }
 
     #[cfg(test)]
-    pub fn as_shared(&mut self) -> Option<&mut dyn SharedProvider> {
+    pub fn as_shared(&self) -> Option<&dyn SharedProvider> {
         if let Self::Shared(v) = self {
-            Some(v.as_mut())
+            Some(v.as_ref())
         } else {
             None
         }
@@ -122,13 +114,13 @@ impl ProviderEntry {
 
 impl From<Box<dyn Provider>> for ProviderEntry {
     fn from(provider: Box<dyn Provider>) -> Self {
-        ProviderEntry::Owned(provider)
+        ProviderEntry::Owned(provider.into())
     }
 }
 
 impl From<Box<dyn SharedProvider>> for ProviderEntry {
     fn from(provider: Box<dyn SharedProvider>) -> Self {
-        ProviderEntry::Shared(provider)
+        ProviderEntry::Shared(provider.into())
     }
 }
 

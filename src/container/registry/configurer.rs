@@ -71,7 +71,7 @@ mod tests {
         configurer.register(Box::new(TestProvider::new(42i32)));
         configurer.register_shared(Box::new(TestProvider::new(Arc::new("str"))));
 
-        let mut map = configurer.finish().unwrap();
+        let map = configurer.finish().unwrap();
         assert!(map.get(&key::of::<i32>()).is_some());
         assert!(map.get(&key::of::<Arc<&str>>()).is_some());
     }
