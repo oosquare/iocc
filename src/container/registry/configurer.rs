@@ -3,13 +3,14 @@ use std::error::Error;
 use crate::container::registry::provider_map::ProviderMap;
 use crate::container::registry::{Configurer, RegistryError};
 use crate::provider::{Provider, SharedProvider};
+use crate::scope::Scope;
 
-pub struct ConfigurerImpl {
-    providers: ProviderMap,
+pub struct ConfigurerImpl<S: Scope> {
+    providers: ProviderMap<S>,
     errors: Vec<RegistryError>,
 }
 
-impl ConfigurerImpl {
+impl<S: Scope> ConfigurerImpl<S> {
     pub fn new() -> Self {
         Self {
             providers: ProviderMap::new(),
@@ -17,7 +18,7 @@ impl ConfigurerImpl {
         }
     }
 
-    pub fn finish(self) -> Result<ProviderMap, Vec<RegistryError>> {
+    pub fn finish(self) -> Result<ProviderMap<S>, Vec<RegistryError>> {
         if self.errors.is_empty() {
             Ok(self.providers)
         } else {
@@ -26,7 +27,9 @@ impl ConfigurerImpl {
     }
 }
 
-impl Configurer for ConfigurerImpl {
+impl<S: Scope> Configurer for ConfigurerImpl<S> {
+    type Scope = S;
+
     fn register(&mut self, provider: Box<dyn Provider>) {
         if self.providers.get(provider.dyn_key()).is_none() {
             self.providers.insert(provider);
@@ -37,9 +40,9 @@ impl Configurer for ConfigurerImpl {
         }
     }
 
-    fn register_shared(&mut self, provider: Box<dyn SharedProvider>) {
+    fn register_shared(&mut self, provider: Box<dyn SharedProvider>, scope: S) {
         if self.providers.get(provider.dyn_key()).is_none() {
-            self.providers.insert_shared(provider);
+            self.providers.insert_shared(provider, scope);
         } else {
             self.errors.push(RegistryError::KeyDuplicated {
                 key: provider.dyn_key().dyn_clone(),
@@ -62,6 +65,7 @@ mod tests {
     use crate::container::injector::{InjectorError, TypedInjector};
     use crate::key::{self, KeyImpl};
     use crate::provider::{TypedProvider, TypedSharedProvider};
+    use crate::scope::SingletonScope;
 
     use super::*;
 
@@ -69,7 +73,7 @@ mod tests {
     fn configurer_impl_register_succeeds() {
         let mut configurer = ConfigurerImpl::new();
         configurer.register(Box::new(TestProvider::new(42i32)));
-        configurer.register_shared(Box::new(TestProvider::new(Arc::new("str"))));
+        configurer.register_shared(Box::new(TestProvider::new(Arc::new("str"))), SingletonScope);
 
         let map = configurer.finish().unwrap();
         assert!(map.get(&key::of::<i32>()).is_some());
@@ -78,7 +82,7 @@ mod tests {
 
     #[test]
     fn configurer_impl_finish_fails_when_key_is_duplicated() {
-        let mut configurer = ConfigurerImpl::new();
+        let mut configurer: ConfigurerImpl<SingletonScope> = ConfigurerImpl::new();
         configurer.register(Box::new(TestProvider::new(42i32)));
         configurer.register(Box::new(TestProvider::new(42i32)));
 
@@ -93,7 +97,7 @@ mod tests {
     fn configurer_impl_finish_fails_when_other_error_reported() {
         let mut configurer = ConfigurerImpl::new();
         configurer.register(Box::new(TestProvider::new(42i32)));
-        configurer.register_shared(Box::new(TestProvider::new(Arc::new("str"))));
+        configurer.register_shared(Box::new(TestProvider::new(Arc::new("str"))), SingletonScope);
         configurer.report_module_error("test", "whatever".into());
 
         let errs = configurer.finish().unwrap_err();

@@ -9,25 +9,26 @@ use crate::container::registry::{Registry, RegistryError};
 use crate::container::{Managed, SharedManaged};
 use crate::key::Key;
 use crate::module::Module;
+use crate::scope::Scope;
 
-pub struct CoreContainer {
-    provider_map: ProviderMap,
+pub struct CoreContainer<S: Scope> {
+    provider_map: ProviderMap<S>,
     object_map: ObjectMap,
     constructing: HashSet<Box<dyn Key>>,
 }
 
-impl CoreContainer {
+impl<S: Scope> CoreContainer<S> {
     fn get_impl(&mut self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
         if let Some(entry) = self.object_map.get(key) {
             return Ok(entry.clone_managed());
         }
 
         match self.provider_map.get(key) {
-            Some(ProviderEntry::Owned(provider)) => {
+            Some(ProviderEntry::Owned { provider }) => {
                 let provider = Arc::clone(&provider);
                 provider.dyn_provide(self)
             }
-            Some(ProviderEntry::Shared(provider)) => {
+            Some(ProviderEntry::Shared { provider, .. }) => {
                 let provider = Arc::clone(&provider);
                 let res = provider.dyn_provide_shared(self);
                 if let Ok(object) = res.as_ref() {
@@ -42,8 +43,13 @@ impl CoreContainer {
     }
 }
 
-impl Registry for CoreContainer {
-    fn init<M: Module>(module: M) -> Result<Self, Vec<RegistryError>> {
+impl<S: Scope> Registry for CoreContainer<S> {
+    type Scope = S;
+
+    fn init<M>(module: M) -> Result<Self, Vec<RegistryError>>
+    where
+        M: Module<Scope = Self::Scope>,
+    {
         let mut configurer = ConfigurerImpl::new();
         module.setup(&mut configurer);
 
@@ -55,7 +61,7 @@ impl Registry for CoreContainer {
     }
 }
 
-impl Injector for CoreContainer {
+impl<S: Scope> Injector for CoreContainer<S> {
     fn dyn_get(&mut self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
         if self.constructing.contains(key) {
             Err(InjectorError::CyclicDependency {
@@ -80,6 +86,7 @@ mod tests {
     use crate::key;
     use crate::provider::component::ComponentProvider;
     use crate::provider::instance::InstanceProvider;
+    use crate::scope::SingletonScope;
 
     use super::*;
 
@@ -137,7 +144,10 @@ mod tests {
         let mut provider_map = ProviderMap::new();
         provider_map.insert(Box::new(InstanceProvider::new(key::of(), 42i32)));
         provider_map.insert(Box::new(InstanceProvider::new(key::of(), "str")));
-        provider_map.insert_shared(Box::new(ComponentProvider::<_, A>::new(key::of())));
+        provider_map.insert_shared(
+            Box::new(ComponentProvider::<_, A>::new(key::of())),
+            SingletonScope,
+        );
 
         let mut container = CoreContainer {
             provider_map,
@@ -152,7 +162,7 @@ mod tests {
 
     #[test]
     fn core_container_get_fails_when_cyclic_dependency_occurrs() {
-        let mut provider_map = ProviderMap::new();
+        let mut provider_map: ProviderMap<SingletonScope> = ProviderMap::new();
         provider_map.insert(Box::new(ComponentProvider::<_, B>::new(key::of())));
 
         let mut container = CoreContainer {
@@ -167,7 +177,7 @@ mod tests {
 
     #[test]
     fn core_container_get_fails_when_key_not_found() {
-        let mut container = CoreContainer {
+        let mut container: CoreContainer<SingletonScope> = CoreContainer {
             provider_map: ProviderMap::new(),
             object_map: ObjectMap::new(),
             constructing: HashSet::new(),

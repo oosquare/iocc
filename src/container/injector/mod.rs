@@ -58,6 +58,13 @@ pub enum InjectorError {
     #[snafu(display("could not construct the object {key} which depends on itself somehow"))]
     #[non_exhaustive]
     CyclicDependency { key: Box<dyn Key> },
+    #[snafu(display("could not build a object {key} of {lifetime} lifetime in a {scope} scope"))]
+    #[non_exhaustive]
+    LifetimeTooShort {
+        key: Box<dyn Key>,
+        lifetime: &'static str,
+        scope: &'static str,
+    },
     #[snafu(display("could not downcast the object to the given concrete type"))]
     #[non_exhaustive]
     TypeMismatched { expected_type: &'static str },

@@ -8,15 +8,22 @@ use snafu::prelude::*;
 use crate::key::Key;
 use crate::module::Module;
 use crate::provider::{Provider, SharedProvider};
+use crate::scope::Scope;
 
 pub trait Registry: Sized + Send + Sync + 'static {
-    fn init<M: Module>(module: M) -> Result<Self, Vec<RegistryError>>;
+    type Scope: Scope;
+
+    fn init<M>(module: M) -> Result<Self, Vec<RegistryError>>
+    where
+        M: Module<Scope = Self::Scope>;
 }
 
 pub trait Configurer: Send + Sync + 'static {
+    type Scope: Scope;
+
     fn register(&mut self, provider: Box<dyn Provider>);
 
-    fn register_shared(&mut self, provider: Box<dyn SharedProvider>);
+    fn register_shared(&mut self, provider: Box<dyn SharedProvider>, scope: Self::Scope);
 
     fn report_module_error(&mut self, module: &'static str, err: Box<dyn Error + Send + Sync>);
 }

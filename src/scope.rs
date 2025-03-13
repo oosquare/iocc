@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::Hash;
 
-pub trait Scope: Copy + Debug + Display + Ord + Hash + Sized + Send + Sync {
+pub trait Scope: Copy + Debug + Display + Ord + Hash + Sized + Send + Sync + 'static {
     const SINGLETON: Self;
 
     const MIN: Self;
