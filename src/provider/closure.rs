@@ -1,13 +1,14 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 use crate::container::injector::{Injector, InjectorError, TypedInjector};
+use crate::container::SharedManaged;
 use crate::key::TypedKey;
-use crate::provider::TypedProvider;
+use crate::provider::{TypedProvider, TypedSharedProvider};
 
 pub struct ClosureProvider<K, C>
 where
     K: TypedKey,
-    C: FnMut(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    C: Fn(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
 {
     key: K,
     closure: C,
@@ -16,7 +17,7 @@ where
 impl<K, C> ClosureProvider<K, C>
 where
     K: TypedKey,
-    C: FnMut(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    C: Fn(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
 {
     pub fn new(key: K, closure: C) -> Self {
         Self { key, closure }
@@ -26,7 +27,7 @@ where
 impl<K, C> Debug for ClosureProvider<K, C>
 where
     K: TypedKey,
-    C: FnMut(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    C: Fn(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("ClosureProvider<K, C>")
@@ -38,13 +39,13 @@ where
 impl<K, C> TypedProvider for ClosureProvider<K, C>
 where
     K: TypedKey,
-    C: FnMut(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    C: Fn(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
 {
     type Key = K;
 
     type Output = K::Target;
 
-    fn provide<I>(&mut self, injector: &mut I) -> Result<Self::Output, InjectorError>
+    fn provide<I>(&self, injector: &mut I) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized,
     {
@@ -56,64 +57,11 @@ where
     }
 }
 
-pub struct OnceClosureProvider<K, C>
+impl<K, C> TypedSharedProvider for ClosureProvider<K, C>
 where
-    K: TypedKey,
-    C: FnOnce(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    K: TypedKey<Target: SharedManaged>,
+    C: Fn(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
 {
-    key: K,
-    closure: Option<C>,
-}
-
-impl<K, C> OnceClosureProvider<K, C>
-where
-    K: TypedKey,
-    C: FnOnce(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
-{
-    pub fn new(key: K, closure: C) -> Self {
-        Self {
-            key,
-            closure: Some(closure),
-        }
-    }
-}
-
-impl<K, C> Debug for OnceClosureProvider<K, C>
-where
-    K: TypedKey,
-    C: FnOnce(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("OnceClosureProvider<K, C>")
-            .field("key", self.key())
-            .finish_non_exhaustive()
-    }
-}
-
-impl<K, C> TypedProvider for OnceClosureProvider<K, C>
-where
-    K: TypedKey,
-    C: FnOnce(&mut dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
-{
-    type Key = K;
-
-    type Output = K::Target;
-
-    fn provide<I>(&mut self, injector: &mut I) -> Result<Self::Output, InjectorError>
-    where
-        I: TypedInjector + ?Sized,
-    {
-        match self.closure.take() {
-            Some(closure) => closure(injector.upcast_dyn()),
-            None => Err(InjectorError::Consumed {
-                key: Box::new(self.key),
-            }),
-        }
-    }
-
-    fn key(&self) -> &Self::Key {
-        &self.key
-    }
 }
 
 #[cfg(test)]
@@ -126,24 +74,12 @@ mod tests {
     #[test]
     fn closure_provider_succeeds() {
         let mut injector = MockInjector::new();
-        let mut provider = ClosureProvider::new(key::of(), |_| Ok(42i32));
+        let provider = ClosureProvider::new(key::of(), |_| Ok(42i32));
 
         let res = provider.provide(&mut injector);
         assert_eq!(res.unwrap(), 42);
 
         let res = provider.provide(&mut injector);
         assert_eq!(res.unwrap(), 42);
-    }
-
-    #[test]
-    fn once_closure_provider_succeeds() {
-        let mut injector = MockInjector::new();
-        let mut provider = OnceClosureProvider::new(key::of(), |_| Ok(42i32));
-
-        let res = provider.provide(&mut injector);
-        assert_eq!(res.unwrap(), 42);
-
-        let res = provider.provide(&mut injector);
-        assert!(matches!(res.unwrap_err(), InjectorError::Consumed { .. }));
     }
 }

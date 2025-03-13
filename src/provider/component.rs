@@ -29,15 +29,6 @@ where
     }
 }
 
-// SAFETY: The provider neither contains any `C` nor has any access to other `C`.
-// Fields other than `PhantomData` are `Sync`, so it should also be `Sync`.
-unsafe impl<K, C> Sync for ComponentProvider<K, C>
-where
-    K: TypedKey<Target = C::Output>,
-    C: Component,
-{
-}
-
 impl<K, C> Debug for ComponentProvider<K, C>
 where
     K: TypedKey<Target = C::Output>,
@@ -59,7 +50,7 @@ where
 
     type Output = K::Target;
 
-    fn provide<I>(&mut self, injector: &mut I) -> Result<Self::Output, InjectorError>
+    fn provide<I>(&self, injector: &mut I) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized,
     {
@@ -122,7 +113,7 @@ mod tests {
     #[test]
     fn component_provider_succeeds() {
         let mut injector = MockInjector::new();
-        let mut provider = ComponentProvider::<_, Impl>::new(key::of::<Arc<dyn Abstract>>());
+        let provider = ComponentProvider::<_, Impl>::new(key::of::<Arc<dyn Abstract>>());
         assert!(provider.provide(&mut injector).is_ok());
 
         assert_is_shared_provider(&provider);

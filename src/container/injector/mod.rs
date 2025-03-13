@@ -61,9 +61,6 @@ pub enum InjectorError {
     #[snafu(display("could not downcast the object to the given concrete type"))]
     #[non_exhaustive]
     TypeMismatched { expected_type: &'static str },
-    #[snafu(display("the instance or provider of {key} is already consumed"))]
-    #[non_exhaustive]
-    Consumed { key: Box<dyn Key> },
     #[snafu(display("could not get the object {key} from the adapter's inner"))]
     #[non_exhaustive]
     AdapterInner {

@@ -22,12 +22,12 @@ impl CoreContainer {
         }
 
         match self.provider_map.move_out(key) {
-            Some(ProviderEntry::Owned(mut provider)) => {
+            Some(ProviderEntry::Owned(provider)) => {
                 let res = provider.dyn_provide(self);
                 self.provider_map.insert(provider);
                 res
             }
-            Some(ProviderEntry::Shared(mut provider)) => {
+            Some(ProviderEntry::Shared(provider)) => {
                 let res = provider.dyn_provide_shared(self);
                 if let Ok(object) = res.as_ref() {
                     self.object_map.insert(key.dyn_clone(), object.dyn_clone());
@@ -81,7 +81,7 @@ mod tests {
     use crate::container::injector::TypedInjector;
     use crate::key;
     use crate::provider::component::ComponentProvider;
-    use crate::provider::instance::CloneableInstanceProvider;
+    use crate::provider::instance::InstanceProvider;
 
     use super::*;
 
@@ -137,8 +137,8 @@ mod tests {
     #[test]
     fn core_container_get_succeeds() {
         let mut provider_map = ProviderMap::new();
-        provider_map.insert(Box::new(CloneableInstanceProvider::new(key::of(), 42i32)));
-        provider_map.insert(Box::new(CloneableInstanceProvider::new(key::of(), "str")));
+        provider_map.insert(Box::new(InstanceProvider::new(key::of(), 42i32)));
+        provider_map.insert(Box::new(InstanceProvider::new(key::of(), "str")));
         provider_map.insert_shared(Box::new(ComponentProvider::<_, A>::new(key::of())));
 
         let mut container = CoreContainer {

@@ -9,11 +9,11 @@ use crate::util::any::AsAny;
 
 pub use core::CoreContainer;
 
-pub trait Managed: AsAny + Send + 'static {}
+pub trait Managed: AsAny + Send + Sync + 'static {}
 
-impl<T> Managed for T where T: AsAny + Send + 'static {}
+impl<T> Managed for T where T: AsAny + Send + Sync + 'static {}
 
-pub trait SharedManaged: Managed + Sync {
+pub trait SharedManaged: Managed {
     fn dyn_clone(&self) -> Box<dyn SharedManaged>;
 
     fn upcast_managed(self: Box<Self>) -> Box<dyn Managed>;

@@ -1,10 +1,11 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 use crate::container::injector::{InjectorError, TypedInjector};
+use crate::container::SharedManaged;
 use crate::key::TypedKey;
-use crate::provider::TypedProvider;
+use crate::provider::{TypedProvider, TypedSharedProvider};
 
-pub struct CloneableInstanceProvider<K>
+pub struct InstanceProvider<K>
 where
     K: TypedKey<Target: Clone>,
 {
@@ -12,7 +13,7 @@ where
     instance: K::Target,
 }
 
-impl<K> CloneableInstanceProvider<K>
+impl<K> InstanceProvider<K>
 where
     K: TypedKey<Target: Clone>,
 {
@@ -21,24 +22,18 @@ where
     }
 }
 
-// SAFETY: Mutable access can be only done through its methods which take
-// `&mut self` as the receiver. It's guarenteed that mutable reference is
-// exclusive and can't be shared across multiple threads, thus making it
-// thread-safe.
-unsafe impl<K> Sync for CloneableInstanceProvider<K> where K: TypedKey<Target: Clone> {}
-
-impl<K> Debug for CloneableInstanceProvider<K>
+impl<K> Debug for InstanceProvider<K>
 where
     K: TypedKey<Target: Clone>,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("CloneableInstanceProvider<K>")
+        f.debug_struct("InstanceProvider<K>")
             .field("key", &self.key)
             .finish_non_exhaustive()
     }
 }
 
-impl<K> TypedProvider for CloneableInstanceProvider<K>
+impl<K> TypedProvider for InstanceProvider<K>
 where
     K: TypedKey<Target: Clone>,
 {
@@ -46,7 +41,7 @@ where
 
     type Output = K::Target;
 
-    fn provide<I>(&mut self, _injector: &mut I) -> Result<Self::Output, InjectorError>
+    fn provide<I>(&self, _injector: &mut I) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized,
     {
@@ -58,67 +53,7 @@ where
     }
 }
 
-pub struct OnceInstanceProvider<K>
-where
-    K: TypedKey,
-{
-    key: K,
-    instance: Option<K::Target>,
-}
-
-impl<K> OnceInstanceProvider<K>
-where
-    K: TypedKey,
-{
-    pub fn new(key: K, instance: K::Target) -> Self {
-        Self {
-            key,
-            instance: Some(instance),
-        }
-    }
-}
-
-// SAFETY: Mutable access can be only done through its methods which take
-// `&mut self` as the receiver. It's guarenteed that mutable reference is
-// exclusive and can't be shared across multiple threads, thus making it
-// thread-safe.
-unsafe impl<K> Sync for OnceInstanceProvider<K> where K: TypedKey {}
-
-impl<K> Debug for OnceInstanceProvider<K>
-where
-    K: TypedKey,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("OnceInstanceProvider<K>")
-            .field("key", &self.key)
-            .finish_non_exhaustive()
-    }
-}
-
-impl<K> TypedProvider for OnceInstanceProvider<K>
-where
-    K: TypedKey,
-{
-    type Key = K;
-
-    type Output = K::Target;
-
-    fn provide<I>(&mut self, _injector: &mut I) -> Result<Self::Output, InjectorError>
-    where
-        I: TypedInjector + ?Sized,
-    {
-        match self.instance.take() {
-            Some(instance) => Ok(instance),
-            None => Err(InjectorError::Consumed {
-                key: Box::new(self.key),
-            }),
-        }
-    }
-
-    fn key(&self) -> &Self::Key {
-        &self.key
-    }
-}
+impl<K> TypedSharedProvider for InstanceProvider<K> where K: TypedKey<Target: Clone + SharedManaged> {}
 
 #[cfg(test)]
 mod tests {
@@ -129,8 +64,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn cloneable_instance_provider_succeeds() {
-        let mut provider = CloneableInstanceProvider::new(key::of::<i32>(), 42);
+    fn instance_provider_succeeds() {
+        let provider = InstanceProvider::new(key::of::<i32>(), 42);
         let mut injector = MockInjector::new();
 
         assert_eq!(provider.dyn_key(), &key::of::<i32>() as &dyn Key);
@@ -140,19 +75,5 @@ mod tests {
 
         let res = provider.provide(&mut injector);
         assert_eq!(res.unwrap(), 42);
-    }
-
-    #[test]
-    fn once_instance_provider_succeeds() {
-        let mut provider = OnceInstanceProvider::new(key::of::<i32>(), 42);
-        let mut injector = MockInjector::new();
-
-        assert_eq!(provider.dyn_key(), &key::of::<i32>() as &dyn Key);
-
-        let res = provider.provide(&mut injector);
-        assert_eq!(res.unwrap(), 42);
-
-        let res = provider.provide(&mut injector);
-        assert!(matches!(res.unwrap_err(), InjectorError::Consumed { .. }));
     }
 }
