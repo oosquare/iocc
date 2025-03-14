@@ -5,7 +5,7 @@ use parking_lot::Mutex;
 
 use crate::container::context::SharedContext;
 use crate::container::injector::{Injector, InjectorError};
-use crate::container::registry::provider_map::ProviderEntry;
+use crate::container::registry::ProviderEntry;
 use crate::container::Managed;
 use crate::key::Key;
 use crate::provider::Provider;
@@ -17,12 +17,19 @@ pub struct LocalContext<S: Scope> {
 }
 
 impl<S: Scope> LocalContext<S> {
-    #[cfg_attr(not(test), expect(dead_code))]
     pub fn new(shared: Arc<SharedContext<S>>) -> Self {
         Self {
             shared,
             managed: Mutex::new(LocalManagedObjectData::new()),
         }
+    }
+
+    pub fn shared(&self) -> Arc<SharedContext<S>> {
+        Arc::clone(&self.shared)
+    }
+
+    pub fn current_scope(&self) -> S {
+        self.shared.current_scope()
     }
 
     fn get_object(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
@@ -93,7 +100,7 @@ mod tests {
 
     use crate::component::Component;
     use crate::container::injector::TypedInjector;
-    use crate::container::registry::provider_map::ProviderMap;
+    use crate::container::registry::ProviderMap;
     use crate::key;
     use crate::provider::component::ComponentProvider;
     use crate::provider::instance::InstanceProvider;

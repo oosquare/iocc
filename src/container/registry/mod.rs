@@ -1,5 +1,5 @@
-pub(super) mod configurer;
-pub(super) mod provider_map;
+mod configurer;
+mod provider_map;
 
 use std::error::Error;
 
@@ -9,6 +9,9 @@ use crate::key::Key;
 use crate::module::Module;
 use crate::provider::{Provider, SharedProvider};
 use crate::scope::Scope;
+
+pub use configurer::ConfigurerImpl;
+pub use provider_map::{ProviderEntry, ProviderMap};
 
 pub trait Registry: Sized + Send + Sync + 'static {
     type Scope: Scope;

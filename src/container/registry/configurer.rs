@@ -11,7 +11,6 @@ pub struct ConfigurerImpl<S: Scope> {
 }
 
 impl<S: Scope> ConfigurerImpl<S> {
-    #[cfg_attr(not(test), expect(dead_code))]
     pub fn new() -> Self {
         Self {
             providers: ProviderMap::new(),
@@ -19,7 +18,6 @@ impl<S: Scope> ConfigurerImpl<S> {
         }
     }
 
-    #[cfg_attr(not(test), expect(dead_code))]
     pub fn finish(self) -> Result<ProviderMap<S>, Vec<RegistryError>> {
         if self.errors.is_empty() {
             Ok(self.providers)

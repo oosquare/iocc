@@ -1,4 +1,4 @@
-pub(super) mod object_map;
+mod object_map;
 
 use std::any;
 use std::error::Error;
@@ -9,6 +9,8 @@ use snafu::prelude::*;
 use crate::container::Managed;
 use crate::key::{Key, TypedKey};
 use crate::util::any::Downcast;
+
+pub use object_map::{ObjectEntry, ObjectMap};
 
 #[cfg_attr(test, mockall::automock)]
 pub trait Injector: Send + Sync + 'static {

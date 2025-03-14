@@ -5,9 +5,9 @@ use std::thread::{self, ThreadId};
 use oneshot::{Receiver, Sender};
 use parking_lot::{RwLock, RwLockWriteGuard};
 
-use crate::container::injector::object_map::ObjectMap;
+use crate::container::injector::ObjectMap;
 use crate::container::injector::{Injector, InjectorError};
-use crate::container::registry::provider_map::{ProviderEntry, ProviderMap};
+use crate::container::registry::{ProviderEntry, ProviderMap};
 use crate::container::Managed;
 use crate::key::Key;
 use crate::provider::SharedProvider;
@@ -21,12 +21,10 @@ pub struct SharedContext<S: Scope> {
 }
 
 impl<S: Scope> SharedContext<S> {
-    #[cfg_attr(not(test), expect(dead_code))]
     pub fn new_root(providers: Arc<ProviderMap<S>>) -> Self {
         Self::new_impl(None, providers, S::SINGLETON)
     }
 
-    #[cfg_attr(not(test), expect(dead_code))]
     pub fn new_sub(parent: Arc<Self>) -> Option<Self> {
         if let Some(scope) = parent.scope.sub_scope() {
             let providers = Arc::clone(&parent.providers);
@@ -45,8 +43,7 @@ impl<S: Scope> SharedContext<S> {
         }
     }
 
-    #[expect(dead_code)]
-    pub fn scope(&self) -> S {
+    pub fn current_scope(&self) -> S {
         self.scope
     }
 
