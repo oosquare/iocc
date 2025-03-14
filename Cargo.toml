@@ -9,6 +9,7 @@ repository = "https://github.com/oosquare/iocc"
 
 [dependencies]
 oneshot = { version = "0.1.11", features = ["std"] }
+parking_lot = "0.12.3"
 snafu = "0.8.5"
 
 [dev-dependencies]

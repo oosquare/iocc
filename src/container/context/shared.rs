@@ -1,8 +1,9 @@
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock, RwLockWriteGuard};
+use std::sync::Arc;
 use std::thread::{self, ThreadId};
 
 use oneshot::{Receiver, Sender};
+use parking_lot::{RwLock, RwLockWriteGuard};
 
 use crate::container::injector::object_map::ObjectMap;
 use crate::container::injector::{Injector, InjectorError};
@@ -81,7 +82,7 @@ impl<S: Scope> SharedContext<S> {
     }
 
     fn try_get_constructed_object(&self, key: &dyn Key) -> Option<Box<dyn Managed>> {
-        let objects = &self.managed.read().unwrap().objects;
+        let objects = &self.managed.read().objects;
         objects.get(key).map(|entry| entry.clone_managed())
     }
 
@@ -117,7 +118,7 @@ impl<S: Scope> SharedContext<S> {
         provider: &dyn SharedProvider,
     ) -> Result<Box<dyn Managed>, InjectorError> {
         let key = provider.dyn_key();
-        let mut managed = self.managed.write().unwrap();
+        let mut managed = self.managed.write();
 
         if let Some(context) = managed.constructing.get_mut(key) {
             if context.is_constructed_by_current_thread() {
@@ -172,7 +173,7 @@ impl<S: Scope> SharedContext<S> {
     ) -> Result<Box<dyn Managed>, InjectorError> {
         match receiver.recv() {
             Ok(WaitResponse::Constructed) => {
-                let managed = self.managed.read().unwrap();
+                let managed = self.managed.read();
                 let Some(object) = managed.objects.get(key) else {
                     unreachable!("`object` should already be put into `self.managed.objects`")
                 };
@@ -196,13 +197,13 @@ impl<S: Scope> SharedContext<S> {
 
         match provider.dyn_provide_shared(self) {
             Ok(object) => {
-                let mut managed = self.managed.write().unwrap();
+                let mut managed = self.managed.write();
                 managed.objects.insert(key.dyn_clone(), object.dyn_clone());
                 self.notify_waiters(managed, key, WaitResponse::Constructed);
                 Ok(object.upcast_managed())
             }
             Err(err) => {
-                let managed = self.managed.write().unwrap();
+                let managed = self.managed.write();
                 self.notify_waiters(managed, key, WaitResponse::Error(err.clone()));
                 Err(err)
             }
@@ -345,10 +346,10 @@ mod tests {
         let object = sub_context.get(&key).unwrap();
         assert_eq!(object.id, 0u32);
 
-        let managed = root_context.managed.read().unwrap();
+        let managed = root_context.managed.read();
         assert!(managed.objects.get(&key).is_some());
 
-        let managed = sub_context.managed.read().unwrap();
+        let managed = sub_context.managed.read();
         assert!(managed.objects.get(&key).is_none());
     }
 
