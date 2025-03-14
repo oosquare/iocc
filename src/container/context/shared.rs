@@ -20,10 +20,12 @@ pub struct SharedContext<S: Scope> {
 }
 
 impl<S: Scope> SharedContext<S> {
+    #[cfg_attr(not(test), expect(dead_code))]
     pub fn new_root(providers: Arc<ProviderMap<S>>) -> Self {
         Self::new_impl(None, providers, S::SINGLETON)
     }
 
+    #[cfg_attr(not(test), expect(dead_code))]
     pub fn new_sub(parent: Arc<Self>) -> Option<Self> {
         if let Some(scope) = parent.scope.sub_scope() {
             let providers = Arc::clone(&parent.providers);
@@ -42,6 +44,7 @@ impl<S: Scope> SharedContext<S> {
         }
     }
 
+    #[expect(dead_code)]
     pub fn scope(&self) -> S {
         self.scope
     }

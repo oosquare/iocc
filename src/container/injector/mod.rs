@@ -105,11 +105,11 @@ impl Clone for InjectorError {
             Self::TypeMismatched { expected_type } => Self::TypeMismatched { expected_type },
             Self::AdapterInner { key, source } => Self::AdapterInner {
                 key: key.dyn_clone(),
-                source: Arc::clone(&source),
+                source: Arc::clone(source),
             },
             Self::ObjectConstruction { key, source } => Self::ObjectConstruction {
                 key: key.dyn_clone(),
-                source: Arc::clone(&source),
+                source: Arc::clone(source),
             },
         }
     }
