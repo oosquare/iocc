@@ -41,7 +41,7 @@ where
 
     type Output = K::Target;
 
-    fn provide<I>(&self, _injector: &mut I) -> Result<Self::Output, InjectorError>
+    fn provide<I>(&self, _injector: &I) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized,
     {
@@ -66,14 +66,14 @@ mod tests {
     #[test]
     fn instance_provider_succeeds() {
         let provider = InstanceProvider::new(key::of::<i32>(), 42);
-        let mut injector = MockInjector::new();
+        let injector = MockInjector::new();
 
         assert_eq!(provider.dyn_key(), &key::of::<i32>() as &dyn Key);
 
-        let res = provider.provide(&mut injector);
+        let res = provider.provide(&injector);
         assert_eq!(res.unwrap(), 42);
 
-        let res = provider.provide(&mut injector);
+        let res = provider.provide(&injector);
         assert_eq!(res.unwrap(), 42);
     }
 }

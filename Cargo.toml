@@ -8,6 +8,7 @@ authors = ["Justin Chen oosquare@outlook.com"]
 repository = "https://github.com/oosquare/iocc"
 
 [dependencies]
+oneshot = { version = "0.1.11", features = ["std"] }
 snafu = "0.8.5"
 
 [dev-dependencies]

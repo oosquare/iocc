@@ -8,7 +8,7 @@ pub trait Component: Managed + Sized {
 
     type Error: Into<Box<dyn Error + Send + Sync>>;
 
-    fn construct<I>(injector: &mut I) -> Result<Result<Self, Self::Error>, InjectorError>
+    fn construct<I>(injector: &I) -> Result<Result<Self, Self::Error>, InjectorError>
     where
         I: TypedInjector + ?Sized;
 

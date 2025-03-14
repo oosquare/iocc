@@ -136,7 +136,7 @@ mod tests {
 
         type Output = T;
 
-        fn provide<I>(&self, _injector: &mut I) -> Result<Self::Output, InjectorError>
+        fn provide<I>(&self, _injector: &I) -> Result<Self::Output, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {

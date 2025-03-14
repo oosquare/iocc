@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::key::Key;
 use crate::provider::{Provider, SharedProvider};
-use crate::scope::Scope;
+use crate::scope::{Lifetime, Scope};
 
 #[derive(Debug)]
 pub struct ProviderMap<S: Scope> {
@@ -122,6 +122,13 @@ impl<S: Scope> ProviderEntry<S> {
         }
     }
 
+    pub fn lifetime(&self) -> Lifetime<S> {
+        match self {
+            Self::Shared { scope, .. } => Lifetime::scoped(*scope),
+            Self::Owned { .. } => Lifetime::transient(),
+        }
+    }
+
     #[cfg(test)]
     pub fn as_shared(&self) -> Option<&dyn SharedProvider> {
         if let Self::Shared { provider, .. } = self {
@@ -228,7 +235,7 @@ mod tests {
 
         type Output = T;
 
-        fn provide<I>(&self, _injector: &mut I) -> Result<Self::Output, InjectorError>
+        fn provide<I>(&self, _injector: &I) -> Result<Self::Output, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {

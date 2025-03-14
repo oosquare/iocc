@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use crate::component::Component;
 use crate::container::injector::{InjectorError, TypedInjector};
@@ -50,7 +51,7 @@ where
 
     type Output = K::Target;
 
-    fn provide<I>(&self, injector: &mut I) -> Result<Self::Output, InjectorError>
+    fn provide<I>(&self, injector: &I) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized,
     {
@@ -58,7 +59,7 @@ where
             Ok(Ok(obj)) => Ok(obj.post_process()),
             Ok(Err(err)) => Err(InjectorError::ObjectConstruction {
                 key: Box::new(self.key),
-                source: err.into(),
+                source: Arc::from(err.into()),
             }),
             Err(err) => Err(err),
         }
@@ -98,7 +99,7 @@ mod tests {
 
         type Error = Infallible;
 
-        fn construct<I>(_injector: &mut I) -> Result<Result<Self, Self::Error>, InjectorError>
+        fn construct<I>(_injector: &I) -> Result<Result<Self, Self::Error>, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {
@@ -112,9 +113,9 @@ mod tests {
 
     #[test]
     fn component_provider_succeeds() {
-        let mut injector = MockInjector::new();
+        let injector = MockInjector::new();
         let provider = ComponentProvider::<_, Impl>::new(key::of::<Arc<dyn Abstract>>());
-        assert!(provider.provide(&mut injector).is_ok());
+        assert!(provider.provide(&injector).is_ok());
 
         assert_is_shared_provider(&provider);
     }
