@@ -1,7 +1,6 @@
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::mem;
-use std::sync::Arc;
 
 use crate::key::Key;
 use crate::provider::{Provider, SharedProvider};
@@ -96,22 +95,20 @@ impl<S: Scope> From<ProviderEntry<S>> for ProviderSlot<S> {
 #[derive(Debug)]
 pub enum ProviderEntry<S: Scope> {
     Shared {
-        provider: Arc<dyn SharedProvider>,
+        provider: Box<dyn SharedProvider>,
         scope: S,
     },
     Owned {
-        provider: Arc<dyn Provider>,
+        provider: Box<dyn Provider>,
     },
 }
 
 impl<S: Scope> ProviderEntry<S> {
     pub fn new_shared(provider: Box<dyn SharedProvider>, scope: S) -> Self {
-        let provider = Arc::from(provider);
         Self::Shared { provider, scope }
     }
 
     pub fn new_owned(provider: Box<dyn Provider>) -> Self {
-        let provider = Arc::from(provider);
         Self::Owned { provider }
     }
 
