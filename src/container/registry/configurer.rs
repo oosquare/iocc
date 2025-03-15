@@ -2,6 +2,7 @@ use std::error::Error;
 
 use crate::container::registry::provider_map::ProviderMap;
 use crate::container::registry::{Configurer, RegistryError};
+use crate::key::Key;
 use crate::provider::{Provider, SharedProvider};
 use crate::scope::Scope;
 
@@ -30,22 +31,22 @@ impl<S: Scope> ConfigurerImpl<S> {
 impl<S: Scope> Configurer for ConfigurerImpl<S> {
     type Scope = S;
 
-    fn register(&mut self, provider: Box<dyn Provider>) {
-        if self.providers.get(provider.dyn_key()).is_none() {
-            self.providers.insert(provider);
+    fn register(&mut self, key: Box<dyn Key>, provider: Box<dyn Provider>) {
+        if self.providers.get(key.as_ref()).is_none() {
+            self.providers.insert(key, provider);
         } else {
             self.errors.push(RegistryError::KeyDuplicated {
-                key: provider.dyn_key().dyn_clone(),
+                key: key.dyn_clone(),
             });
         }
     }
 
-    fn register_shared(&mut self, provider: Box<dyn SharedProvider>, scope: S) {
-        if self.providers.get(provider.dyn_key()).is_none() {
-            self.providers.insert_shared(provider, scope);
+    fn register_shared(&mut self, key: Box<dyn Key>, provider: Box<dyn SharedProvider>, scope: S) {
+        if self.providers.get(key.as_ref()).is_none() {
+            self.providers.insert_shared(key, provider, scope);
         } else {
             self.errors.push(RegistryError::KeyDuplicated {
-                key: provider.dyn_key().dyn_clone(),
+                key: key.dyn_clone(),
             });
         }
     }
@@ -72,8 +73,15 @@ mod tests {
     #[test]
     fn configurer_impl_register_succeeds() {
         let mut configurer = ConfigurerImpl::new();
-        configurer.register(Box::new(TestProvider::new(42i32)));
-        configurer.register_shared(Box::new(TestProvider::new(Arc::new("str"))), SingletonScope);
+        configurer.register(
+            Box::new(key::of::<i32>()),
+            Box::new(TestProvider::new(42i32)),
+        );
+        configurer.register_shared(
+            Box::new(key::of::<Arc<&'static str>>()),
+            Box::new(TestProvider::new(Arc::new("str"))),
+            SingletonScope,
+        );
 
         let map = configurer.finish().unwrap();
         assert!(map.get(&key::of::<i32>()).is_some());
@@ -83,8 +91,14 @@ mod tests {
     #[test]
     fn configurer_impl_finish_fails_when_key_is_duplicated() {
         let mut configurer: ConfigurerImpl<SingletonScope> = ConfigurerImpl::new();
-        configurer.register(Box::new(TestProvider::new(42i32)));
-        configurer.register(Box::new(TestProvider::new(42i32)));
+        configurer.register(
+            Box::new(key::of::<i32>()),
+            Box::new(TestProvider::new(42i32)),
+        );
+        configurer.register(
+            Box::new(key::of::<i32>()),
+            Box::new(TestProvider::new(42i32)),
+        );
 
         let errs = configurer.finish().unwrap_err();
         assert!(matches!(
@@ -96,8 +110,15 @@ mod tests {
     #[test]
     fn configurer_impl_finish_fails_when_other_error_reported() {
         let mut configurer = ConfigurerImpl::new();
-        configurer.register(Box::new(TestProvider::new(42i32)));
-        configurer.register_shared(Box::new(TestProvider::new(Arc::new("str"))), SingletonScope);
+        configurer.register(
+            Box::new(key::of::<i32>()),
+            Box::new(TestProvider::new(42i32)),
+        );
+        configurer.register_shared(
+            Box::new(key::of::<Arc<&'static str>>()),
+            Box::new(TestProvider::new(Arc::new("str"))),
+            SingletonScope,
+        );
         configurer.report_module_error("test", "whatever".into());
 
         let errs = configurer.finish().unwrap_err();
@@ -132,8 +153,6 @@ mod tests {
     where
         T: Clone + Debug + Send + Sync + 'static,
     {
-        type Key = KeyImpl<T, ()>;
-
         type Output = T;
 
         fn provide<I>(&self, _injector: &I) -> Result<Self::Output, InjectorError>
@@ -141,10 +160,6 @@ mod tests {
             I: TypedInjector + ?Sized,
         {
             Ok(self.value.clone())
-        }
-
-        fn key(&self) -> &Self::Key {
-            &self.key
         }
     }
 

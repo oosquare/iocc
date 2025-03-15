@@ -47,8 +47,6 @@ where
     K: TypedKey<Target = C::Output>,
     C: Component,
 {
-    type Key = K;
-
     type Output = K::Target;
 
     fn provide<I>(&self, injector: &I) -> Result<Self::Output, InjectorError>
@@ -63,10 +61,6 @@ where
             }),
             Err(err) => Err(err),
         }
-    }
-
-    fn key(&self) -> &Self::Key {
-        &self.key
     }
 }
 

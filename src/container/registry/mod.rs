@@ -24,9 +24,14 @@ pub trait Registry: Sized + Send + Sync + 'static {
 pub trait Configurer: Send + Sync + 'static {
     type Scope: Scope;
 
-    fn register(&mut self, provider: Box<dyn Provider>);
+    fn register(&mut self, key: Box<dyn Key>, provider: Box<dyn Provider>);
 
-    fn register_shared(&mut self, provider: Box<dyn SharedProvider>, scope: Self::Scope);
+    fn register_shared(
+        &mut self,
+        key: Box<dyn Key>,
+        provider: Box<dyn SharedProvider>,
+        scope: Self::Scope,
+    );
 
     fn report_module_error(&mut self, module: &'static str, err: Box<dyn Error + Send + Sync>);
 }

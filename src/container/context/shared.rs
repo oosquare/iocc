@@ -57,11 +57,13 @@ impl<S: Scope> SharedContext<S> {
         }
 
         match self.try_get_provider_by_key(key)? {
-            p @ ProviderEntry::Shared { provider, scope } => {
+            p @ ProviderEntry::Shared {
+                provider, scope, ..
+            } => {
                 if self.should_forward_request_to_parent(*scope) {
                     self.get_object_from_parent(key)
                 } else if *scope == self.scope {
-                    self.get_object_from_current_context(provider.as_ref())
+                    self.get_object_from_current_context(provider.as_ref(), key)
                 } else {
                     Err(InjectorError::ShortLifetime {
                         key: key.dyn_clone(),
@@ -113,8 +115,8 @@ impl<S: Scope> SharedContext<S> {
     fn get_object_from_current_context(
         &self,
         provider: &dyn SharedProvider,
+        key: &dyn Key,
     ) -> Result<Box<dyn Managed>, InjectorError> {
-        let key = provider.dyn_key();
         let mut managed = self.managed.write();
 
         if let Some(context) = managed.constructing.get_mut(key) {
@@ -333,7 +335,12 @@ mod tests {
     #[test]
     fn shared_context_get_succeeds_when_lifetime_outlives_current_scope() {
         let mut providers = ProviderMap::new();
-        providers.insert_shared(TestObject::get_provider(0u32), WebScope::Singleton);
+        let key = key::qualified::<Arc<TestObject>, _>(0u32);
+        providers.insert_shared(
+            Box::new(key),
+            TestObject::get_provider(0u32),
+            WebScope::Singleton,
+        );
 
         let root_context = Arc::new(SharedContext::new_root(Arc::new(providers)));
         let sub_context = Arc::new(SharedContext::new_sub(Arc::clone(&root_context)).unwrap());
@@ -356,8 +363,16 @@ mod tests {
         let mut providers = ProviderMap::new();
 
         for i in 0..NUM {
-            providers.insert_shared(TestObject::get_provider(2 * i), WebScope::Singleton);
-            providers.insert_shared(TestObject::get_provider(2 * i + 1), WebScope::Singleton);
+            providers.insert_shared(
+                Box::new(key::of::<Arc<TestObject>>()),
+                TestObject::get_provider(2 * i),
+                WebScope::Singleton,
+            );
+            providers.insert_shared(
+                Box::new(key::of::<Arc<TestObject>>()),
+                TestObject::get_provider(2 * i + 1),
+                WebScope::Singleton,
+            );
         }
 
         let context = Arc::new(SharedContext::new_root(Arc::new(providers)));
@@ -395,8 +410,15 @@ mod tests {
     #[test]
     fn shared_context_get_fails_when_object_lifetime_is_within_scope() {
         let mut providers = ProviderMap::new();
-        providers.insert_shared(TestObject::get_provider(0), WebScope::Session);
-        providers.insert(Box::new(InstanceProvider::new(key::of(), 0i32)));
+        providers.insert_shared(
+            Box::new(key::qualified::<Arc<TestObject>, u32>(0)),
+            TestObject::get_provider(0),
+            WebScope::Session,
+        );
+        providers.insert(
+            Box::new(key::of::<i32>()),
+            Box::new(InstanceProvider::new(key::of(), 0i32)),
+        );
 
         let context = SharedContext::new_root(Arc::new(providers));
 
@@ -413,7 +435,11 @@ mod tests {
     #[test]
     fn shared_context_get_fails_when_there_exists_cyclic_dependency() {
         let mut providers = ProviderMap::new();
-        providers.insert_shared(RecursiveObject::get_provider(), WebScope::Singleton);
+        providers.insert_shared(
+            Box::new(key::of::<Arc<RecursiveObject>>()),
+            RecursiveObject::get_provider(),
+            WebScope::Singleton,
+        );
 
         let context = SharedContext::new_root(Arc::new(providers));
 

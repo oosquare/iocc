@@ -3,7 +3,7 @@ use std::hash::Hash;
 
 use crate::container::registry::Configurer;
 use crate::container::{Managed, SharedManaged};
-use crate::key::TypedKey;
+use crate::key;
 use crate::module::dsl::ToLifetime;
 use crate::provider::{TypedProvider, TypedSharedProvider};
 use crate::scope::{Scope, Transient};
@@ -14,7 +14,7 @@ where
     KT: Managed,
     KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
     L: ToLifetime,
-    P: TypedProvider<Key: TypedKey<Target = KT>>,
+    P: TypedProvider<Output = KT>,
 {
     provider: P,
     qualifier: KQ,
@@ -27,7 +27,7 @@ where
     KT: Managed,
     KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
     L: ToLifetime,
-    P: TypedProvider<Key: TypedKey<Target = KT>>,
+    P: TypedProvider<Output = KT>,
 {
     pub(super) fn new(provider: P, qualifier: KQ, lifetime: L) -> Self {
         Self {
@@ -61,10 +61,11 @@ where
     KT: SharedManaged,
     KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
     S: Scope,
-    P: TypedSharedProvider<Key: TypedKey<Target = KT, Qualifier = KQ>>,
+    P: TypedSharedProvider<Output = KT>,
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
-        configurer.register_shared(Box::new(self.provider), self.lifetime);
+        let key = key::qualified::<KT, _>(self.qualifier);
+        configurer.register_shared(Box::new(key), Box::new(self.provider), self.lifetime);
     }
 }
 
@@ -72,12 +73,13 @@ impl<KT, KQ, P> ProviderBinding<KT, KQ, Transient, P>
 where
     KT: Managed,
     KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
-    P: TypedProvider<Key: TypedKey<Target = KT, Qualifier = KQ>>,
+    P: TypedProvider<Output = KT>,
 {
     pub fn set_on<S>(self, configurer: &mut dyn Configurer<Scope = S>)
     where
         S: Scope,
     {
-        configurer.register(Box::new(self.provider));
+        let key = key::qualified::<KT, _>(self.qualifier);
+        configurer.register(Box::new(key), Box::new(self.provider));
     }
 }

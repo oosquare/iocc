@@ -6,34 +6,23 @@ use std::fmt::Debug;
 
 use crate::container::injector::{Injector, InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
-use crate::key::{Key, TypedKey};
 
 pub trait Provider: Debug + Send + Sync + 'static {
     fn dyn_provide(&self, injector: &dyn Injector) -> Result<Box<dyn Managed>, InjectorError>;
-
-    fn dyn_key(&self) -> &dyn Key;
 }
 
 pub trait TypedProvider: Provider {
-    type Key: TypedKey<Target = Self::Output>;
-
     type Output: Managed;
 
     fn provide<I>(&self, injector: &I) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized;
-
-    fn key(&self) -> &Self::Key;
 }
 
 impl<T: TypedProvider> Provider for T {
     fn dyn_provide(&self, injector: &dyn Injector) -> Result<Box<dyn Managed>, InjectorError> {
         self.provide(injector)
             .map(|obj| -> Box<dyn Managed> { Box::new(obj) })
-    }
-
-    fn dyn_key(&self) -> &dyn Key {
-        self.key()
     }
 }
 

@@ -31,7 +31,6 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.debug_struct("ClosureProvider<K, C>")
-            .field("key", self.key())
             .finish_non_exhaustive()
     }
 }
@@ -41,8 +40,6 @@ where
     K: TypedKey,
     C: Fn(&dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
 {
-    type Key = K;
-
     type Output = K::Target;
 
     fn provide<I>(&self, injector: &I) -> Result<Self::Output, InjectorError>
@@ -50,10 +47,6 @@ where
         I: TypedInjector + ?Sized,
     {
         (self.closure)(injector.upcast_dyn())
-    }
-
-    fn key(&self) -> &Self::Key {
-        &self.key
     }
 }
 

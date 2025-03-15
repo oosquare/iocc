@@ -18,16 +18,21 @@ impl<S: Scope> ProviderMap<S> {
         }
     }
 
-    pub fn insert(&mut self, provider: Box<dyn Provider>) -> Option<ProviderEntry<S>> {
-        self.insert_impl(ProviderEntry::new_owned(provider))
+    pub fn insert(
+        &mut self,
+        key: Box<dyn Key>,
+        provider: Box<dyn Provider>,
+    ) -> Option<ProviderEntry<S>> {
+        self.insert_impl(ProviderEntry::new_owned(key, provider))
     }
 
     pub fn insert_shared(
         &mut self,
+        key: Box<dyn Key>,
         provider: Box<dyn SharedProvider>,
         scope: S,
     ) -> Option<ProviderEntry<S>> {
-        self.insert_impl(ProviderEntry::new_shared(provider, scope))
+        self.insert_impl(ProviderEntry::new_shared(key, provider, scope))
     }
 
     pub fn get(&self, key: &dyn Key) -> Option<&ProviderEntry<S>> {
@@ -95,27 +100,33 @@ impl<S: Scope> From<ProviderEntry<S>> for ProviderSlot<S> {
 #[derive(Debug)]
 pub enum ProviderEntry<S: Scope> {
     Shared {
+        key: Box<dyn Key>,
         provider: Box<dyn SharedProvider>,
         scope: S,
     },
     Owned {
+        key: Box<dyn Key>,
         provider: Box<dyn Provider>,
     },
 }
 
 impl<S: Scope> ProviderEntry<S> {
-    pub fn new_shared(provider: Box<dyn SharedProvider>, scope: S) -> Self {
-        Self::Shared { provider, scope }
+    pub fn new_shared(key: Box<dyn Key>, provider: Box<dyn SharedProvider>, scope: S) -> Self {
+        Self::Shared {
+            key,
+            provider,
+            scope,
+        }
     }
 
-    pub fn new_owned(provider: Box<dyn Provider>) -> Self {
-        Self::Owned { provider }
+    pub fn new_owned(key: Box<dyn Key>, provider: Box<dyn Provider>) -> Self {
+        Self::Owned { key, provider }
     }
 
     pub fn dyn_key(&self) -> &dyn Key {
         match self {
-            Self::Shared { provider, .. } => provider.dyn_key(),
-            Self::Owned { provider } => provider.dyn_key(),
+            Self::Shared { key, .. } => key.as_ref(),
+            Self::Owned { key, .. } => key.as_ref(),
         }
     }
 
@@ -153,16 +164,28 @@ mod tests {
     fn type_slot_registry_register_succeeds() {
         let mut registry: ProviderMap<SingletonScope> = ProviderMap::new();
         assert!(registry
-            .insert(Box::new(TestProvider::new(42i32)))
+            .insert(
+                Box::new(key::of::<i32>()),
+                Box::new(TestProvider::new(42i32))
+            )
             .is_none());
         assert!(registry
-            .insert(Box::new(TestProvider::new("str")))
+            .insert(
+                Box::new(key::of::<&'static str>()),
+                Box::new(TestProvider::new("str"))
+            )
             .is_none());
         assert!(registry
-            .insert(Box::new(TestProvider::new(42i32)))
+            .insert(
+                Box::new(key::of::<i32>()),
+                Box::new(TestProvider::new(42i32))
+            )
             .is_some());
         assert!(registry
-            .insert(Box::new(TestProvider::new("str")))
+            .insert(
+                Box::new(key::of::<&'static str>()),
+                Box::new(TestProvider::new("str"))
+            )
             .is_some());
     }
 
@@ -170,16 +193,32 @@ mod tests {
     fn type_slot_registry_register_shared_succeeds() {
         let mut registry = ProviderMap::new();
         assert!(registry
-            .insert_shared(Box::new(TestProvider::new(Arc::new(42i32))), SingletonScope)
+            .insert_shared(
+                Box::new(key::of::<Arc<i32>>()),
+                Box::new(TestProvider::new(Arc::new(42i32))),
+                SingletonScope
+            )
             .is_none());
         assert!(registry
-            .insert_shared(Box::new(TestProvider::new(Arc::new("str"))), SingletonScope)
+            .insert_shared(
+                Box::new(key::of::<Arc<&'static str>>()),
+                Box::new(TestProvider::new(Arc::new("str"))),
+                SingletonScope
+            )
             .is_none());
         assert!(registry
-            .insert_shared(Box::new(TestProvider::new(Arc::new(42i32))), SingletonScope)
+            .insert_shared(
+                Box::new(key::of::<Arc<i32>>()),
+                Box::new(TestProvider::new(Arc::new(42i32))),
+                SingletonScope
+            )
             .is_some());
         assert!(registry
-            .insert_shared(Box::new(TestProvider::new(Arc::new("str"))), SingletonScope)
+            .insert_shared(
+                Box::new(key::of::<Arc<&'static str>>()),
+                Box::new(TestProvider::new(Arc::new("str"))),
+                SingletonScope
+            )
             .is_some());
     }
 
@@ -187,7 +226,11 @@ mod tests {
     fn type_slot_registry_get_succeeds_when_provider_is_shared() {
         let mut registry = ProviderMap::new();
         assert!(registry
-            .insert_shared(Box::new(TestProvider::new(Arc::new(42i32))), SingletonScope)
+            .insert_shared(
+                Box::new(key::of::<Arc<i32>>()),
+                Box::new(TestProvider::new(Arc::new(42i32))),
+                SingletonScope
+            )
             .is_none());
 
         let provider = registry.get(&key::of::<Arc<i32>>()).unwrap();
@@ -228,8 +271,6 @@ mod tests {
     where
         T: Clone + Debug + Send + Sync + 'static,
     {
-        type Key = KeyImpl<T, ()>;
-
         type Output = T;
 
         fn provide<I>(&self, _injector: &I) -> Result<Self::Output, InjectorError>
@@ -237,10 +278,6 @@ mod tests {
             I: TypedInjector + ?Sized,
         {
             Ok(self.value.clone())
-        }
-
-        fn key(&self) -> &Self::Key {
-            &self.key
         }
     }
 

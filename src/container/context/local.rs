@@ -35,8 +35,8 @@ impl<S: Scope> LocalContext<S> {
     fn get_object(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
         match self.try_get_provider_by_key(key)? {
             ProviderEntry::Shared { .. } => self.shared.dyn_get(key),
-            ProviderEntry::Owned { provider } => {
-                self.get_object_from_current_context(provider.as_ref())
+            ProviderEntry::Owned { provider, .. } => {
+                self.get_object_from_current_context(provider.as_ref(), key)
             }
         }
     }
@@ -54,8 +54,8 @@ impl<S: Scope> LocalContext<S> {
     fn get_object_from_current_context(
         &self,
         provider: &dyn Provider,
+        key: &dyn Key,
     ) -> Result<Box<dyn Managed>, InjectorError> {
-        let key = provider.dyn_key();
         let mut managed = self.managed.lock();
 
         if managed.constructing.contains(key) {
@@ -159,9 +159,18 @@ mod tests {
     #[test]
     fn local_context_get_succeeds() {
         let mut providers: ProviderMap<SingletonScope> = ProviderMap::new();
-        providers.insert(Box::new(ComponentProvider::<_, TestObject>::new(key::of())));
-        providers.insert(Box::new(InstanceProvider::new(key::of(), 42i32)));
-        providers.insert(Box::new(InstanceProvider::new(key::of(), "str")));
+        providers.insert(
+            Box::new(key::of::<TestObject>()),
+            Box::new(ComponentProvider::<_, TestObject>::new(key::of())),
+        );
+        providers.insert(
+            Box::new(key::of::<i32>()),
+            Box::new(InstanceProvider::new(key::of(), 42i32)),
+        );
+        providers.insert(
+            Box::new(key::of::<&'static str>()),
+            Box::new(InstanceProvider::new(key::of(), "str")),
+        );
 
         let root_context = SharedContext::new_root(Arc::new(providers));
         let local_context = LocalContext::new(Arc::new(root_context));
@@ -175,6 +184,7 @@ mod tests {
     fn local_context_get_succeeds_when_needing_non_transient_object() {
         let mut providers: ProviderMap<SingletonScope> = ProviderMap::new();
         providers.insert_shared(
+            Box::new(key::of::<Arc<i32>>()),
             Box::new(InstanceProvider::new(key::of(), Arc::new(42i32))),
             SingletonScope,
         );
@@ -189,9 +199,10 @@ mod tests {
     #[test]
     fn local_context_get_fails_when_there_exists_cyclic_dependency() {
         let mut providers: ProviderMap<SingletonScope> = ProviderMap::new();
-        providers.insert(Box::new(ComponentProvider::<_, RecursiveObject>::new(
-            key::of(),
-        )));
+        providers.insert(
+            Box::new(key::of::<Box<RecursiveObject>>()),
+            Box::new(ComponentProvider::<_, RecursiveObject>::new(key::of())),
+        );
 
         let root_context = SharedContext::new_root(Arc::new(providers));
         let local_context = LocalContext::new(Arc::new(root_context));

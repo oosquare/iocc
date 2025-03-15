@@ -130,10 +130,12 @@ mod tests {
             configurer: &mut dyn Configurer<Scope = Self::Scope>,
         ) -> Result<(), Box<dyn Error + Send + Sync>> {
             configurer.register_shared(
+                Box::new(key::of::<Arc<TestObject>>()),
                 Box::new(ComponentProvider::<_, TestObject>::new(key::of())),
                 SingletonScope,
             );
             configurer.register_shared(
+                Box::new(key::of::<Arc<String>>()),
                 Box::new(InstanceProvider::new(
                     key::of(),
                     Arc::new(String::from("test-object")),
