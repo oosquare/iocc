@@ -7,20 +7,34 @@ pub mod provider_helper;
 use metadata_helper::MetadataBinding;
 
 use crate::container::Managed;
+use crate::key::TypedKey;
 use crate::scope::{Scope, Transient};
 
-trait ToLifetime {}
+#[allow(private_bounds)]
+pub trait ToLifetime: Sealed {}
 
 impl<S: Scope> ToLifetime for S {}
 
 impl ToLifetime for Transient {}
 
-#[allow(private_bounds)]
+trait Sealed {}
+
+impl<S: Scope> Sealed for S {}
+
+impl Sealed for Transient {}
+
 pub fn bind<KT>() -> MetadataBinding<KT, (), Transient>
 where
     KT: Managed,
 {
     MetadataBinding::new((), Transient)
+}
+
+pub fn bind_key<K>(key: K) -> MetadataBinding<K::Target, K::Qualifier, Transient>
+where
+    K: TypedKey,
+{
+    MetadataBinding::new(key.qualifier(), Transient)
 }
 
 #[cfg(test)]
