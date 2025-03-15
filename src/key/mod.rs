@@ -8,7 +8,7 @@ use crate::container::Managed;
 use crate::util::any::AsAny;
 use crate::util::hash::DynHash;
 
-pub use crate::key::implementation::KeyImpl;
+pub(crate) use crate::key::implementation::KeyImpl;
 
 pub trait Key
 where
@@ -51,15 +51,21 @@ pub trait TypedKey: Key + Copy + Eq + Hash {
     fn qualifier(&self) -> Self::Qualifier;
 }
 
-pub fn of<T: Managed>() -> KeyImpl<T, ()> {
+pub fn of<T>() -> impl TypedKey<Target = T, Qualifier = ()>
+where
+    T: Managed,
+{
     KeyImpl::new(())
 }
 
-pub fn named<T: Managed>(name: &'static str) -> KeyImpl<T, &'static str> {
+pub fn named<T>(name: &'static str) -> impl TypedKey<Target = T, Qualifier = &'static str>
+where
+    T: Managed,
+{
     KeyImpl::new(name)
 }
 
-pub fn qualified<T, Q>(qualifier: Q) -> KeyImpl<T, Q>
+pub fn qualified<T, Q>(qualifier: Q) -> impl TypedKey<Target = T, Qualifier = Q>
 where
     T: Managed,
     Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,

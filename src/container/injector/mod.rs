@@ -10,7 +10,7 @@ use crate::container::Managed;
 use crate::key::{Key, TypedKey};
 use crate::util::any::Downcast;
 
-pub use object_map::{ObjectEntry, ObjectMap};
+pub(super) use object_map::ObjectMap;
 
 #[cfg_attr(test, mockall::automock)]
 pub trait Injector: Send + Sync + 'static {

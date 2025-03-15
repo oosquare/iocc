@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use crate::component::Component;
 use crate::container::injector::{Injector, InjectorError};
-use crate::container::registry::Configurer;
+use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
 use crate::key;
 use crate::module::dsl::closure_helper::ClosureBinding;
@@ -100,7 +100,7 @@ where
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
         let key = key::qualified::<KT, _>(self.qualifier);
         let provider = ComponentProvider::<KT>::new();
-        configurer.register_shared(Box::new(key), Box::new(provider), self.lifetime);
+        configurer.register_shared(key, provider, self.lifetime);
     }
 }
 
@@ -113,7 +113,7 @@ where
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
         let key = key::qualified::<Arc<C>, _>(self.qualifier);
         let provider = ComponentProvider::<C>::new();
-        configurer.register_shared(Box::new(key), Box::new(provider), self.lifetime);
+        configurer.register_shared(key, provider, self.lifetime);
     }
 }
 
@@ -128,6 +128,6 @@ where
     {
         let key = key::qualified::<KT, _>(self.qualifier);
         let provider = ComponentProvider::<KT>::new();
-        configurer.register(Box::new(key), Box::new(provider));
+        configurer.register(key, provider);
     }
 }

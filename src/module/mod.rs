@@ -7,6 +7,8 @@ use crate::container::registry::Configurer;
 use crate::scope::Scope;
 use crate::util::any::AsAny;
 
+pub use dsl::bind;
+
 pub trait Module: AsAny + 'static {
     type Scope: Scope;
 

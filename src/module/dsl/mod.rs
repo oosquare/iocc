@@ -71,6 +71,7 @@ mod tests {
             bind::<&'static str>()
                 .to_provider(InstanceProvider::new("str"))
                 .set_on(configurer);
+            // configurer
 
             Ok(())
         }

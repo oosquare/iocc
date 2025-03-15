@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use crate::container::registry::provider_map::ProviderMap;
-use crate::container::registry::{Configurer, RegistryError};
+use crate::container::registry::{Configurer, ConfigurerPrivate, RegistryError};
 use crate::key::Key;
 use crate::provider::{Provider, SharedProvider};
 use crate::scope::Scope;
@@ -31,7 +31,21 @@ impl<S: Scope> ConfigurerImpl<S> {
 impl<S: Scope> Configurer for ConfigurerImpl<S> {
     type Scope = S;
 
-    fn register(&mut self, key: Box<dyn Key>, provider: Box<dyn Provider>) {
+    #[allow(private_interfaces)]
+    fn as_private(&mut self) -> &mut dyn ConfigurerPrivate<Scope = Self::Scope> {
+        self
+    }
+
+    fn report_module_error(&mut self, module: &'static str, err: Box<dyn Error + Send + Sync>) {
+        self.errors.push(RegistryError::ModuleInner {
+            module,
+            source: err,
+        });
+    }
+}
+
+impl<S: Scope> ConfigurerPrivate for ConfigurerImpl<S> {
+    fn dyn_register(&mut self, key: Box<dyn Key>, provider: Box<dyn Provider>) {
         if self.providers.get(key.as_ref()).is_none() {
             self.providers.insert(key, provider);
         } else {
@@ -41,7 +55,12 @@ impl<S: Scope> Configurer for ConfigurerImpl<S> {
         }
     }
 
-    fn register_shared(&mut self, key: Box<dyn Key>, provider: Box<dyn SharedProvider>, scope: S) {
+    fn dyn_register_shared(
+        &mut self,
+        key: Box<dyn Key>,
+        provider: Box<dyn SharedProvider>,
+        scope: S,
+    ) {
         if self.providers.get(key.as_ref()).is_none() {
             self.providers.insert_shared(key, provider, scope);
         } else {
@@ -49,13 +68,6 @@ impl<S: Scope> Configurer for ConfigurerImpl<S> {
                 key: key.dyn_clone(),
             });
         }
-    }
-
-    fn report_module_error(&mut self, module: &'static str, err: Box<dyn Error + Send + Sync>) {
-        self.errors.push(RegistryError::ModuleInner {
-            module,
-            source: err,
-        });
     }
 }
 
@@ -73,11 +85,11 @@ mod tests {
     #[test]
     fn configurer_impl_register_succeeds() {
         let mut configurer = ConfigurerImpl::new();
-        configurer.register(
+        configurer.dyn_register(
             Box::new(key::of::<i32>()),
             Box::new(TestProvider::new(42i32)),
         );
-        configurer.register_shared(
+        configurer.dyn_register_shared(
             Box::new(key::of::<Arc<&'static str>>()),
             Box::new(TestProvider::new(Arc::new("str"))),
             SingletonScope,
@@ -91,11 +103,11 @@ mod tests {
     #[test]
     fn configurer_impl_finish_fails_when_key_is_duplicated() {
         let mut configurer: ConfigurerImpl<SingletonScope> = ConfigurerImpl::new();
-        configurer.register(
+        configurer.dyn_register(
             Box::new(key::of::<i32>()),
             Box::new(TestProvider::new(42i32)),
         );
-        configurer.register(
+        configurer.dyn_register(
             Box::new(key::of::<i32>()),
             Box::new(TestProvider::new(42i32)),
         );
@@ -110,11 +122,11 @@ mod tests {
     #[test]
     fn configurer_impl_finish_fails_when_other_error_reported() {
         let mut configurer = ConfigurerImpl::new();
-        configurer.register(
+        configurer.dyn_register(
             Box::new(key::of::<i32>()),
             Box::new(TestProvider::new(42i32)),
         );
-        configurer.register_shared(
+        configurer.dyn_register_shared(
             Box::new(key::of::<Arc<&'static str>>()),
             Box::new(TestProvider::new(Arc::new("str"))),
             SingletonScope,

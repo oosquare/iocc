@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use crate::container::registry::Configurer;
+use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
 use crate::key;
 use crate::module::dsl::ToLifetime;
@@ -65,7 +65,7 @@ where
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
         let key = key::qualified::<KT, _>(self.qualifier);
-        configurer.register_shared(Box::new(key), Box::new(self.provider), self.lifetime);
+        configurer.register_shared(key, self.provider, self.lifetime);
     }
 }
 
@@ -80,6 +80,6 @@ where
         S: Scope,
     {
         let key = key::qualified::<KT, _>(self.qualifier);
-        configurer.register(Box::new(key), Box::new(self.provider));
+        configurer.register(key, self.provider);
     }
 }

@@ -69,7 +69,7 @@ mod tests {
 
     use crate::component::Component;
     use crate::container::injector::TypedInjector;
-    use crate::container::registry::Configurer;
+    use crate::container::registry::{Configurer, TypedConfigurer};
     use crate::key;
     use crate::provider::component::ComponentProvider;
     use crate::provider::instance::InstanceProvider;
@@ -130,13 +130,13 @@ mod tests {
             configurer: &mut dyn Configurer<Scope = Self::Scope>,
         ) -> Result<(), Box<dyn Error + Send + Sync>> {
             configurer.register_shared(
-                Box::new(key::of::<Arc<TestObject>>()),
-                Box::new(ComponentProvider::<TestObject>::new()),
+                key::of::<Arc<TestObject>>(),
+                ComponentProvider::<TestObject>::new(),
                 SingletonScope,
             );
             configurer.register_shared(
-                Box::new(key::of::<Arc<String>>()),
-                Box::new(InstanceProvider::new(Arc::new(String::from("test-object")))),
+                key::of::<Arc<String>>(),
+                InstanceProvider::new(Arc::new(String::from("test-object"))),
                 SingletonScope,
             );
             Ok(())
