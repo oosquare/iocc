@@ -67,12 +67,10 @@ mod tests {
 
     use parking_lot::Mutex;
 
-    use crate::component::Component;
     use crate::container::injector::TypedInjector;
     use crate::container::registry::{Configurer, TypedConfigurer};
     use crate::key;
-    use crate::provider::component::ComponentProvider;
-    use crate::provider::instance::InstanceProvider;
+    use crate::provider::{Component, ComponentProvider, InstanceProvider};
     use crate::scope::SingletonScope;
 
     use super::*;

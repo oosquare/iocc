@@ -281,8 +281,7 @@ enum WaitResponse {
 mod tests {
     use crate::container::injector::TypedInjector;
     use crate::key;
-    use crate::provider::closure::ClosureProvider;
-    use crate::provider::instance::InstanceProvider;
+    use crate::provider::{ClosureProvider, InstanceProvider};
     use crate::scope::WebScope;
 
     use super::*;

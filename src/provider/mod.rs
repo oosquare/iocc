@@ -1,12 +1,16 @@
-pub mod closure;
-pub mod component;
-pub mod instance;
+mod closure;
+mod component;
+mod instance;
 
 use std::fmt::Debug;
 
 use crate::container::injector::{Injector, InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
 use crate::key::Key;
+
+pub use closure::ClosureProvider;
+pub use component::{Component, ComponentProvider};
+pub use instance::InstanceProvider;
 
 pub trait Provider: Debug + Send + Sync + 'static {
     fn dyn_provide(

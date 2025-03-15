@@ -3,7 +3,6 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::component::Component;
 use crate::container::injector::{Injector, InjectorError};
 use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
@@ -13,8 +12,8 @@ use crate::module::dsl::component_helper::ComponentBinding;
 use crate::module::dsl::instance_helper::InstanceBinding;
 use crate::module::dsl::provider_helper::ProviderBinding;
 use crate::module::dsl::ToLifetime;
-use crate::provider::component::ComponentProvider;
 use crate::provider::TypedProvider;
+use crate::provider::{Component, ComponentProvider};
 use crate::scope::{Scope, Transient};
 
 #[allow(private_bounds)]

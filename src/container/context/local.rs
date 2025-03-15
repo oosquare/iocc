@@ -99,12 +99,10 @@ impl LocalManagedObjectData {
 mod tests {
     use std::convert::Infallible;
 
-    use crate::component::Component;
     use crate::container::injector::TypedInjector;
     use crate::container::registry::ProviderMap;
     use crate::key;
-    use crate::provider::component::ComponentProvider;
-    use crate::provider::instance::InstanceProvider;
+    use crate::provider::{Component, ComponentProvider, InstanceProvider};
     use crate::scope::SingletonScope;
 
     use super::*;

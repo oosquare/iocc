@@ -29,11 +29,10 @@ mod tests {
     use std::error::Error;
     use std::sync::Arc;
 
-    use crate::component::Component;
     use crate::container::injector::{InjectorError, TypedInjector};
     use crate::container::registry::Configurer;
     use crate::module::Module;
-    use crate::provider::instance::InstanceProvider;
+    use crate::provider::{Component, InstanceProvider};
     use crate::scope::WebScope;
 
     use super::*;

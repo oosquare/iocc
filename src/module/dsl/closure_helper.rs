@@ -6,7 +6,7 @@ use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
 use crate::key;
 use crate::module::dsl::ToLifetime;
-use crate::provider::closure::ClosureProvider;
+use crate::provider::ClosureProvider;
 use crate::scope::{Scope, Transient};
 
 #[allow(private_bounds)]

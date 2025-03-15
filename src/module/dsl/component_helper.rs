@@ -2,12 +2,11 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-use crate::component::Component;
 use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::SharedManaged;
 use crate::key;
 use crate::module::dsl::ToLifetime;
-use crate::provider::component::ComponentProvider;
+use crate::provider::{Component, ComponentProvider};
 use crate::scope::{Scope, Transient};
 
 #[allow(private_bounds)]
