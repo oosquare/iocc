@@ -364,22 +364,23 @@ mod tests {
 
         for i in 0..NUM {
             providers.insert_shared(
-                Box::new(key::of::<Arc<TestObject>>()),
+                Box::new(key::qualified::<Arc<TestObject>, _>(2 * i)),
                 TestObject::get_provider(2 * i),
                 WebScope::Singleton,
             );
             providers.insert_shared(
-                Box::new(key::of::<Arc<TestObject>>()),
+                Box::new(key::qualified::<Arc<TestObject>, _>(2 * i + 1)),
                 TestObject::get_provider(2 * i + 1),
                 WebScope::Singleton,
             );
         }
 
         let context = Arc::new(SharedContext::new_root(Arc::new(providers)));
+        let mut handles = Vec::new();
 
         for i in (0..NUM).rev() {
             let ctx = Arc::clone(&context);
-            thread::spawn(move || {
+            handles.push(thread::spawn(move || {
                 let object: Arc<TestObject> = ctx.get(&key::qualified(2 * i)).unwrap();
                 assert_eq!(object.id, 2 * i);
                 assert!(object
@@ -390,9 +391,10 @@ mod tests {
                     .sub_odd
                     .as_ref()
                     .is_none_or(|object| object.id == 2 * (i - 1) + 1));
-            });
+            }));
+
             let ctx = Arc::clone(&context);
-            thread::spawn(move || {
+            handles.push(thread::spawn(move || {
                 let object: Arc<TestObject> = ctx.get(&key::qualified(2 * i + 1)).unwrap();
                 assert_eq!(object.id, 2 * i + 1);
                 assert!(object
@@ -403,8 +405,12 @@ mod tests {
                     .sub_odd
                     .as_ref()
                     .is_none_or(|object| object.id == 2 * (i - 1) + 1));
-            });
+            }));
         }
+
+        handles
+            .into_iter()
+            .for_each(|h| h.join().expect("Each thread should not `panic!()`"));
     }
 
     #[test]
