@@ -1,3 +1,4 @@
+use std::any;
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -5,49 +6,41 @@ use std::sync::Arc;
 use crate::component::Component;
 use crate::container::injector::{InjectorError, TypedInjector};
 use crate::container::SharedManaged;
-use crate::key::TypedKey;
 use crate::provider::{TypedProvider, TypedSharedProvider};
 
-pub struct ComponentProvider<K, C>
+pub struct ComponentProvider<C>
 where
-    K: TypedKey<Target = C::Output>,
     C: Component,
 {
-    key: K,
     _marker: PhantomData<C>,
 }
 
-impl<K, C> ComponentProvider<K, C>
+impl<C> ComponentProvider<C>
 where
-    K: TypedKey<Target = C::Output>,
     C: Component,
 {
-    pub fn new(key: K) -> Self {
+    pub fn new() -> Self {
         Self {
-            key,
             _marker: PhantomData,
         }
     }
 }
 
-impl<K, C> Debug for ComponentProvider<K, C>
+impl<C> Debug for ComponentProvider<C>
 where
-    K: TypedKey<Target = C::Output>,
     C: Component,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("ComponentProvider<K, C>")
-            .field("key", &self.key)
+        f.debug_struct("ComponentProvider<C>")
             .finish_non_exhaustive()
     }
 }
 
-impl<K, C> TypedProvider for ComponentProvider<K, C>
+impl<C> TypedProvider for ComponentProvider<C>
 where
-    K: TypedKey<Target = C::Output>,
     C: Component,
 {
-    type Output = K::Target;
+    type Output = C::Output;
 
     fn provide<I>(&self, injector: &I) -> Result<Self::Output, InjectorError>
     where
@@ -56,7 +49,7 @@ where
         match C::construct(injector) {
             Ok(Ok(obj)) => Ok(obj.post_process()),
             Ok(Err(err)) => Err(InjectorError::ObjectConstruction {
-                key: Box::new(self.key),
+                type_name: any::type_name::<C>(),
                 source: Arc::from(err.into()),
             }),
             Err(err) => Err(err),
@@ -64,12 +57,7 @@ where
     }
 }
 
-impl<K, C> TypedSharedProvider for ComponentProvider<K, C>
-where
-    K: TypedKey<Target = C::Output>,
-    C: Component<Output: SharedManaged>,
-{
-}
+impl<C> TypedSharedProvider for ComponentProvider<C> where C: Component<Output: SharedManaged> {}
 
 #[cfg(test)]
 mod tests {
@@ -77,7 +65,6 @@ mod tests {
     use std::sync::Arc;
 
     use crate::container::injector::MockInjector;
-    use crate::key;
     use crate::provider::SharedProvider;
 
     use super::*;
@@ -108,7 +95,7 @@ mod tests {
     #[test]
     fn component_provider_succeeds() {
         let injector = MockInjector::new();
-        let provider = ComponentProvider::<_, Impl>::new(key::of::<Arc<dyn Abstract>>());
+        let provider = ComponentProvider::<Impl>::new();
         assert!(provider.provide(&injector).is_ok());
 
         assert_is_shared_provider(&provider);

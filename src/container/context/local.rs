@@ -161,15 +161,15 @@ mod tests {
         let mut providers: ProviderMap<SingletonScope> = ProviderMap::new();
         providers.insert(
             Box::new(key::of::<TestObject>()),
-            Box::new(ComponentProvider::<_, TestObject>::new(key::of())),
+            Box::new(ComponentProvider::<TestObject>::new()),
         );
         providers.insert(
             Box::new(key::of::<i32>()),
-            Box::new(InstanceProvider::new(key::of(), 42i32)),
+            Box::new(InstanceProvider::new(42i32)),
         );
         providers.insert(
             Box::new(key::of::<&'static str>()),
-            Box::new(InstanceProvider::new(key::of(), "str")),
+            Box::new(InstanceProvider::new("str")),
         );
 
         let root_context = SharedContext::new_root(Arc::new(providers));
@@ -185,7 +185,7 @@ mod tests {
         let mut providers: ProviderMap<SingletonScope> = ProviderMap::new();
         providers.insert_shared(
             Box::new(key::of::<Arc<i32>>()),
-            Box::new(InstanceProvider::new(key::of(), Arc::new(42i32))),
+            Box::new(InstanceProvider::new(Arc::new(42i32))),
             SingletonScope,
         );
 
@@ -201,7 +201,7 @@ mod tests {
         let mut providers: ProviderMap<SingletonScope> = ProviderMap::new();
         providers.insert(
             Box::new(key::of::<Box<RecursiveObject>>()),
-            Box::new(ComponentProvider::<_, RecursiveObject>::new(key::of())),
+            Box::new(ComponentProvider::<RecursiveObject>::new()),
         );
 
         let root_context = SharedContext::new_root(Arc::new(providers));

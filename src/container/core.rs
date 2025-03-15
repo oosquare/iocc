@@ -131,15 +131,12 @@ mod tests {
         ) -> Result<(), Box<dyn Error + Send + Sync>> {
             configurer.register_shared(
                 Box::new(key::of::<Arc<TestObject>>()),
-                Box::new(ComponentProvider::<_, TestObject>::new(key::of())),
+                Box::new(ComponentProvider::<TestObject>::new()),
                 SingletonScope,
             );
             configurer.register_shared(
                 Box::new(key::of::<Arc<String>>()),
-                Box::new(InstanceProvider::new(
-                    key::of(),
-                    Arc::new(String::from("test-object")),
-                )),
+                Box::new(InstanceProvider::new(Arc::new(String::from("test-object")))),
                 SingletonScope,
             );
             Ok(())

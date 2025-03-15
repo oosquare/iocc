@@ -1,46 +1,44 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 use crate::container::injector::{Injector, InjectorError, TypedInjector};
-use crate::container::SharedManaged;
-use crate::key::TypedKey;
+use crate::container::{Managed, SharedManaged};
 use crate::provider::{TypedProvider, TypedSharedProvider};
 
-pub struct ClosureProvider<K, C>
+pub struct ClosureProvider<T, C>
 where
-    K: TypedKey,
-    C: Fn(&dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    T: Managed,
+    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
 {
-    key: K,
     closure: C,
 }
 
-impl<K, C> ClosureProvider<K, C>
+impl<T, C> ClosureProvider<T, C>
 where
-    K: TypedKey,
-    C: Fn(&dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    T: Managed,
+    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
 {
-    pub fn new(key: K, closure: C) -> Self {
-        Self { key, closure }
+    pub fn new(closure: C) -> Self {
+        Self { closure }
     }
 }
 
-impl<K, C> Debug for ClosureProvider<K, C>
+impl<T, C> Debug for ClosureProvider<T, C>
 where
-    K: TypedKey,
-    C: Fn(&dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    T: Managed,
+    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("ClosureProvider<K, C>")
+        f.debug_struct("ClosureProvider<T, C>")
             .finish_non_exhaustive()
     }
 }
 
-impl<K, C> TypedProvider for ClosureProvider<K, C>
+impl<T, C> TypedProvider for ClosureProvider<T, C>
 where
-    K: TypedKey,
-    C: Fn(&dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    T: Managed,
+    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
 {
-    type Output = K::Target;
+    type Output = T;
 
     fn provide<I>(&self, injector: &I) -> Result<Self::Output, InjectorError>
     where
@@ -50,24 +48,23 @@ where
     }
 }
 
-impl<K, C> TypedSharedProvider for ClosureProvider<K, C>
+impl<T, C> TypedSharedProvider for ClosureProvider<T, C>
 where
-    K: TypedKey<Target: SharedManaged>,
-    C: Fn(&dyn Injector) -> Result<K::Target, InjectorError> + Send + Sync + 'static,
+    T: SharedManaged,
+    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
 {
 }
 
 #[cfg(test)]
 mod tests {
     use crate::container::injector::MockInjector;
-    use crate::key;
 
     use super::*;
 
     #[test]
     fn closure_provider_succeeds() {
         let injector = MockInjector::new();
-        let provider = ClosureProvider::new(key::of(), |_| Ok(42i32));
+        let provider = ClosureProvider::new(|_| Ok(42i32));
 
         let res = provider.provide(&injector);
         assert_eq!(res.unwrap(), 42);

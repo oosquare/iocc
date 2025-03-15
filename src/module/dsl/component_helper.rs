@@ -64,7 +64,7 @@ where
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
         let key = key::qualified::<C::Output, _>(self.qualifier);
-        let provider = ComponentProvider::<_, C>::new(key);
+        let provider = ComponentProvider::<C>::new();
         configurer.register_shared(Box::new(key), Box::new(provider), self.lifetime);
     }
 }
@@ -79,7 +79,7 @@ where
         S: Scope,
     {
         let key = key::qualified::<C::Output, _>(self.qualifier);
-        let provider = ComponentProvider::<_, C>::new(key);
+        let provider = ComponentProvider::<C>::new();
         configurer.register(Box::new(key), Box::new(provider));
     }
 }

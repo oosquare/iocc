@@ -32,7 +32,6 @@ mod tests {
     use crate::component::Component;
     use crate::container::injector::{InjectorError, TypedInjector};
     use crate::container::registry::Configurer;
-    use crate::key;
     use crate::module::Module;
     use crate::provider::instance::InstanceProvider;
     use crate::scope::WebScope;
@@ -70,7 +69,7 @@ mod tests {
                 .set_on(configurer);
 
             bind::<&'static str>()
-                .to_provider(InstanceProvider::new(key::of(), "str"))
+                .to_provider(InstanceProvider::new("str"))
                 .set_on(configurer);
 
             Ok(())

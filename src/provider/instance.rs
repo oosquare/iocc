@@ -1,43 +1,40 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 use crate::container::injector::{InjectorError, TypedInjector};
-use crate::container::SharedManaged;
-use crate::key::TypedKey;
+use crate::container::{Managed, SharedManaged};
 use crate::provider::{TypedProvider, TypedSharedProvider};
 
-pub struct InstanceProvider<K>
+pub struct InstanceProvider<T>
 where
-    K: TypedKey<Target: Clone>,
+    T: Managed + Clone,
 {
-    key: K,
-    instance: K::Target,
+    instance: T,
 }
 
-impl<K> InstanceProvider<K>
+impl<T> InstanceProvider<T>
 where
-    K: TypedKey<Target: Clone>,
+    T: Managed + Clone,
 {
-    pub fn new(key: K, instance: K::Target) -> Self {
-        Self { key, instance }
+    pub fn new(instance: T) -> Self {
+        Self { instance }
     }
 }
 
-impl<K> Debug for InstanceProvider<K>
+impl<T> Debug for InstanceProvider<T>
 where
-    K: TypedKey<Target: Clone>,
+    T: Managed + Clone,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("InstanceProvider<K>")
-            .field("key", &self.key)
+        f.debug_struct("InstanceProvider<T>")
             .finish_non_exhaustive()
     }
 }
 
-impl<K> TypedProvider for InstanceProvider<K>
+impl<T> TypedProvider for InstanceProvider<T>
 where
-    K: TypedKey<Target: Clone>,
+    T: Managed + Clone,
 {
-    type Output = K::Target;
+    type Output = T;
 
     fn provide<I>(&self, _injector: &I) -> Result<Self::Output, InjectorError>
     where
@@ -47,18 +44,17 @@ where
     }
 }
 
-impl<K> TypedSharedProvider for InstanceProvider<K> where K: TypedKey<Target: Clone + SharedManaged> {}
+impl<T> TypedSharedProvider for InstanceProvider<T> where T: SharedManaged + Clone {}
 
 #[cfg(test)]
 mod tests {
     use crate::container::injector::MockInjector;
-    use crate::key;
 
     use super::*;
 
     #[test]
     fn instance_provider_succeeds() {
-        let provider = InstanceProvider::new(key::of::<i32>(), 42);
+        let provider = InstanceProvider::new(42);
         let injector = MockInjector::new();
 
         let res = provider.provide(&injector);

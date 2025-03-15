@@ -294,7 +294,7 @@ mod tests {
 
     impl TestObject {
         fn get_provider(id: u32) -> Box<dyn SharedProvider> {
-            Box::new(ClosureProvider::new(key::qualified(id), move |injector| {
+            Box::new(ClosureProvider::new(move |injector| {
                 if id <= 1 {
                     Ok(Arc::new(TestObject {
                         id,
@@ -324,7 +324,7 @@ mod tests {
 
     impl RecursiveObject {
         fn get_provider() -> Box<dyn SharedProvider> {
-            Box::new(ClosureProvider::new(key::of(), move |injector| {
+            Box::new(ClosureProvider::new(move |injector| {
                 Ok(Arc::new(RecursiveObject {
                     _recursive: injector.get(&key::of())?,
                 }))
@@ -417,7 +417,7 @@ mod tests {
         );
         providers.insert(
             Box::new(key::of::<i32>()),
-            Box::new(InstanceProvider::new(key::of(), 0i32)),
+            Box::new(InstanceProvider::new(0i32)),
         );
 
         let context = SharedContext::new_root(Arc::new(providers));

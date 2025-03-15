@@ -64,7 +64,7 @@ mod tests {
     use std::{fmt::Debug, sync::Arc};
 
     use crate::container::injector::{InjectorError, TypedInjector};
-    use crate::key::{self, KeyImpl};
+    use crate::key;
     use crate::provider::{TypedProvider, TypedSharedProvider};
     use crate::scope::SingletonScope;
 
@@ -134,7 +134,6 @@ mod tests {
         T: Clone + Debug + Send + Sync + 'static,
     {
         value: T,
-        key: KeyImpl<T, ()>,
     }
 
     impl<T> TestProvider<T>
@@ -142,10 +141,7 @@ mod tests {
         T: Clone + Debug + Send + Sync + 'static,
     {
         pub fn new(value: T) -> Self {
-            Self {
-                value,
-                key: key::of::<T>(),
-            }
+            Self { value }
         }
     }
 
