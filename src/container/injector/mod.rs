@@ -1,6 +1,5 @@
 mod object_map;
 
-use std::any;
 use std::error::Error;
 use std::sync::Arc;
 
@@ -22,16 +21,13 @@ pub trait TypedInjector: Injector {
     where
         K: TypedKey<Target: Managed>,
     {
-        self.dyn_get(key)
-            .and_then(|boxed| {
-                boxed.downcast::<K::Target>().map_err(|_| {
-                    TypeMismatchedSnafu {
-                        expected_type: any::type_name::<K::Target>(),
-                    }
-                    .build()
-                })
-            })
-            .map(|boxed| *boxed)
+        match self.dyn_get(key) {
+            Ok(boxed) => match boxed.downcast::<K::Target>() {
+                Ok(object) => Ok(*object),
+                Err(_) => unreachable!("the object's type should be `K::Target`"),
+            },
+            Err(err) => Err(err),
+        }
     }
 
     fn upcast_dyn(&self) -> &dyn Injector;
@@ -68,9 +64,6 @@ pub enum InjectorError {
         lifetime: &'static str,
         scope: &'static str,
     },
-    #[snafu(display("could not downcast the object to the given concrete type"))]
-    #[non_exhaustive]
-    TypeMismatched { expected_type: &'static str },
     #[snafu(display("could not get the object {key} from the adapter's inner"))]
     #[non_exhaustive]
     AdapterInner {
@@ -104,7 +97,6 @@ impl Clone for InjectorError {
                 lifetime,
                 scope,
             },
-            Self::TypeMismatched { expected_type } => Self::TypeMismatched { expected_type },
             Self::AdapterInner { key, source } => Self::AdapterInner {
                 key: key.dyn_clone(),
                 source: Arc::clone(source),
