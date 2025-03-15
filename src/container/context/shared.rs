@@ -10,7 +10,7 @@ use crate::container::injector::{Injector, InjectorError};
 use crate::container::registry::{ProviderEntry, ProviderMap};
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::SharedProvider;
+use crate::provider::{CallContext, SharedProvider};
 use crate::scope::Scope;
 
 pub struct SharedContext<S: Scope> {
@@ -194,7 +194,8 @@ impl<S: Scope> SharedContext<S> {
         managed.constructing.insert(key.dyn_clone(), object_context);
         drop(managed);
 
-        match provider.dyn_provide_shared(self) {
+        let context = CallContext::new(key);
+        match provider.dyn_provide_shared(self, &context) {
             Ok(object) => {
                 let mut managed = self.managed.write();
                 managed.objects.insert(key.dyn_clone(), object.dyn_clone());

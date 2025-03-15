@@ -8,7 +8,7 @@ use crate::container::injector::{Injector, InjectorError};
 use crate::container::registry::ProviderEntry;
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::Provider;
+use crate::provider::{CallContext, Provider};
 use crate::scope::Scope;
 
 pub struct LocalContext<S: Scope> {
@@ -66,7 +66,8 @@ impl<S: Scope> LocalContext<S> {
             managed.constructing.insert(key.dyn_clone());
             drop(managed);
 
-            let res = provider.dyn_provide(self);
+            let context = CallContext::new(key);
+            let res = provider.dyn_provide(self, &context);
 
             let mut managed = self.managed.lock();
             managed.constructing.remove(key);

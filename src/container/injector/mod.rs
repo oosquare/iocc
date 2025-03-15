@@ -78,10 +78,10 @@ pub enum InjectorError {
         #[snafu(source(from(InjectorError, Arc::new)))]
         source: Arc<InjectorError>,
     },
-    #[snafu(display("could not construct the object {type_name}"))]
+    #[snafu(display("could not construct the object {key}"))]
     #[non_exhaustive]
     ObjectConstruction {
-        type_name: &'static str,
+        key: Box<dyn Key>,
         source: Arc<dyn Error + Send + Sync>,
     },
 }
@@ -109,8 +109,8 @@ impl Clone for InjectorError {
                 key: key.dyn_clone(),
                 source: Arc::clone(source),
             },
-            Self::ObjectConstruction { type_name, source } => Self::ObjectConstruction {
-                type_name,
+            Self::ObjectConstruction { key, source } => Self::ObjectConstruction {
+                key: key.dyn_clone(),
                 source: Arc::clone(source),
             },
         }

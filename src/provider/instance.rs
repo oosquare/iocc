@@ -2,7 +2,7 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 use crate::container::injector::{InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
-use crate::provider::{TypedProvider, TypedSharedProvider};
+use crate::provider::{CallContext, TypedProvider, TypedSharedProvider};
 
 pub struct InstanceProvider<T>
 where
@@ -36,7 +36,11 @@ where
 {
     type Output = T;
 
-    fn provide<I>(&self, _injector: &I) -> Result<Self::Output, InjectorError>
+    fn provide<I>(
+        &self,
+        _injector: &I,
+        _context: &CallContext<'_>,
+    ) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized,
     {
@@ -49,6 +53,7 @@ impl<T> TypedSharedProvider for InstanceProvider<T> where T: SharedManaged + Clo
 #[cfg(test)]
 mod tests {
     use crate::container::injector::MockInjector;
+    use crate::key;
 
     use super::*;
 
@@ -57,10 +62,10 @@ mod tests {
         let provider = InstanceProvider::new(42);
         let injector = MockInjector::new();
 
-        let res = provider.provide(&injector);
+        let res = provider.provide(&injector, &CallContext::new(&key::of::<i32>()));
         assert_eq!(res.unwrap(), 42);
 
-        let res = provider.provide(&injector);
+        let res = provider.provide(&injector, &CallContext::new(&key::of::<i32>()));
         assert_eq!(res.unwrap(), 42);
     }
 }

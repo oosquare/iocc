@@ -2,7 +2,7 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 use crate::container::injector::{Injector, InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
-use crate::provider::{TypedProvider, TypedSharedProvider};
+use crate::provider::{CallContext, TypedProvider, TypedSharedProvider};
 
 pub struct ClosureProvider<T, C>
 where
@@ -40,7 +40,11 @@ where
 {
     type Output = T;
 
-    fn provide<I>(&self, injector: &I) -> Result<Self::Output, InjectorError>
+    fn provide<I>(
+        &self,
+        injector: &I,
+        _context: &CallContext<'_>,
+    ) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized,
     {
@@ -58,6 +62,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::container::injector::MockInjector;
+    use crate::key;
 
     use super::*;
 
@@ -66,10 +71,10 @@ mod tests {
         let injector = MockInjector::new();
         let provider = ClosureProvider::new(|_| Ok(42i32));
 
-        let res = provider.provide(&injector);
+        let res = provider.provide(&injector, &CallContext::new(&key::of::<i32>()));
         assert_eq!(res.unwrap(), 42);
 
-        let res = provider.provide(&injector);
+        let res = provider.provide(&injector, &CallContext::new(&key::of::<i32>()));
         assert_eq!(res.unwrap(), 42);
     }
 }

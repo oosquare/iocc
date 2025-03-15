@@ -154,7 +154,7 @@ mod tests {
 
     use crate::container::injector::{InjectorError, MockInjector, TypedInjector};
     use crate::key;
-    use crate::provider::{TypedProvider, TypedSharedProvider};
+    use crate::provider::{CallContext, TypedProvider, TypedSharedProvider};
     use crate::scope::SingletonScope;
     use crate::util::any::Downcast;
 
@@ -238,7 +238,10 @@ mod tests {
         let res = provider
             .as_shared()
             .unwrap()
-            .dyn_provide(&mut MockInjector::new())
+            .dyn_provide(
+                &mut MockInjector::new(),
+                &CallContext::new(&key::of::<Arc<i32>>()),
+            )
             .unwrap();
         assert_eq!(
             **res.downcast::<Arc<i32>>().unwrap_or(Box::new(Arc::new(0))),
@@ -269,7 +272,11 @@ mod tests {
     {
         type Output = T;
 
-        fn provide<I>(&self, _injector: &I) -> Result<Self::Output, InjectorError>
+        fn provide<I>(
+            &self,
+            _injector: &I,
+            _context: &CallContext,
+        ) -> Result<Self::Output, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {

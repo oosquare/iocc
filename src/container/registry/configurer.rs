@@ -65,7 +65,7 @@ mod tests {
 
     use crate::container::injector::{InjectorError, TypedInjector};
     use crate::key;
-    use crate::provider::{TypedProvider, TypedSharedProvider};
+    use crate::provider::{CallContext, TypedProvider, TypedSharedProvider};
     use crate::scope::SingletonScope;
 
     use super::*;
@@ -151,7 +151,11 @@ mod tests {
     {
         type Output = T;
 
-        fn provide<I>(&self, _injector: &I) -> Result<Self::Output, InjectorError>
+        fn provide<I>(
+            &self,
+            _injector: &I,
+            _context: &CallContext,
+        ) -> Result<Self::Output, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {
