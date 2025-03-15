@@ -1,3 +1,5 @@
+pub mod dsl;
+
 use std::error::Error;
 use std::marker::PhantomData;
 
