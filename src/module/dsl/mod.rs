@@ -1,8 +1,8 @@
-pub mod closure_helper;
 pub mod component_helper;
 pub mod instance_helper;
 pub mod metadata_helper;
 pub mod provider_helper;
+pub mod raw_closure_helper;
 
 use metadata_helper::MetadataBinding;
 
@@ -46,7 +46,8 @@ mod tests {
     use crate::container::injector::{InjectorError, TypedInjector};
     use crate::container::registry::Configurer;
     use crate::module::Module;
-    use crate::provider::{Component, InstanceProvider};
+    use crate::provider::component::Component;
+    use crate::provider::instance::InstanceProvider;
     use crate::scope::WebScope;
 
     use super::*;
@@ -72,7 +73,7 @@ mod tests {
                 .set_on(configurer);
 
             bind::<i64>()
-                .to_closure(|_| Ok(42))
+                .to_raw_closure(|_| Ok(42))
                 .qualified_by("i64")
                 .set_on(configurer);
 
@@ -84,7 +85,6 @@ mod tests {
             bind::<&'static str>()
                 .to_provider(InstanceProvider::new("str"))
                 .set_on(configurer);
-            // configurer
 
             Ok(())
         }
@@ -97,7 +97,7 @@ mod tests {
     impl TestTrait for TestDynObject {}
 
     impl Component for TestDynObject {
-        type Output = Arc<dyn TestTrait>;
+        type Constructed = Arc<dyn TestTrait>;
 
         type Error = Infallible;
 
@@ -108,7 +108,7 @@ mod tests {
             Ok(Ok(Self))
         }
 
-        fn post_process(self) -> Self::Output {
+        fn post_process(self) -> Self::Constructed {
             Arc::new(self)
         }
     }
@@ -116,7 +116,7 @@ mod tests {
     struct TestObject;
 
     impl Component for TestObject {
-        type Output = Self;
+        type Constructed = Self;
 
         type Error = Infallible;
 
@@ -127,7 +127,7 @@ mod tests {
             Ok(Ok(Self))
         }
 
-        fn post_process(self) -> Self::Output {
+        fn post_process(self) -> Self::Constructed {
             Self
         }
     }

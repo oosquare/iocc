@@ -102,7 +102,8 @@ mod tests {
     use crate::container::injector::TypedInjector;
     use crate::container::registry::ProviderMap;
     use crate::key;
-    use crate::provider::{Component, ComponentProvider, InstanceProvider};
+    use crate::provider::component::{Component, ComponentProvider};
+    use crate::provider::instance::InstanceProvider;
     use crate::scope::SingletonScope;
 
     use super::*;
@@ -113,7 +114,7 @@ mod tests {
     }
 
     impl Component for TestObject {
-        type Output = Self;
+        type Constructed = Self;
 
         type Error = Infallible;
 
@@ -127,7 +128,7 @@ mod tests {
             }))
         }
 
-        fn post_process(self) -> Self::Output {
+        fn post_process(self) -> Self::Constructed {
             self
         }
     }
@@ -137,7 +138,7 @@ mod tests {
     }
 
     impl Component for RecursiveObject {
-        type Output = Box<Self>;
+        type Constructed = Box<Self>;
 
         type Error = Infallible;
 
@@ -150,7 +151,7 @@ mod tests {
             }))
         }
 
-        fn post_process(self) -> Self::Output {
+        fn post_process(self) -> Self::Constructed {
             Box::new(self)
         }
     }

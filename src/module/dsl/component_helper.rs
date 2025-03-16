@@ -6,7 +6,7 @@ use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::SharedManaged;
 use crate::key;
 use crate::module::dsl::ToLifetime;
-use crate::provider::{Component, ComponentProvider};
+use crate::provider::component::{Component, ComponentProvider};
 use crate::scope::{Scope, Transient};
 
 #[allow(private_bounds)]
@@ -57,12 +57,12 @@ where
 
 impl<C, KQ, S> ComponentBinding<C, KQ, S>
 where
-    C: Component<Output: SharedManaged>,
+    C: Component<Constructed: SharedManaged>,
     KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
     S: Scope,
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
-        let key = key::qualified::<C::Output, _>(self.qualifier);
+        let key = key::qualified::<C::Constructed, _>(self.qualifier);
         let provider = ComponentProvider::<C>::new();
         configurer.register_shared(key, provider, self.lifetime);
     }
@@ -77,7 +77,7 @@ where
     where
         S: Scope,
     {
-        let key = key::qualified::<C::Output, _>(self.qualifier);
+        let key = key::qualified::<C::Constructed, _>(self.qualifier);
         let provider = ComponentProvider::<C>::new();
         configurer.register(key, provider);
     }

@@ -1,42 +1,43 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 
-use crate::container::injector::{Injector, InjectorError, TypedInjector};
+use crate::container::injector::{InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
+use crate::provider::closure::RawClosure;
 use crate::provider::{CallContext, TypedProvider, TypedSharedProvider};
 
-pub struct ClosureProvider<T, C>
+pub struct RawClosureProvider<T, C>
 where
     T: Managed,
-    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
+    C: RawClosure<Constructed = T>,
 {
     closure: C,
 }
 
-impl<T, C> ClosureProvider<T, C>
+impl<T, C> RawClosureProvider<T, C>
 where
     T: Managed,
-    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
+    C: RawClosure<Constructed = T>,
 {
     pub fn new(closure: C) -> Self {
         Self { closure }
     }
 }
 
-impl<T, C> Debug for ClosureProvider<T, C>
+impl<T, C> Debug for RawClosureProvider<T, C>
 where
     T: Managed,
-    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
+    C: RawClosure<Constructed = T>,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("ClosureProvider<T, C>")
+        f.debug_struct("RawClosureProvider<T, C>")
             .finish_non_exhaustive()
     }
 }
 
-impl<T, C> TypedProvider for ClosureProvider<T, C>
+impl<T, C> TypedProvider for RawClosureProvider<T, C>
 where
     T: Managed,
-    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
+    C: RawClosure<Constructed = T>,
 {
     type Output = T;
 
@@ -52,10 +53,10 @@ where
     }
 }
 
-impl<T, C> TypedSharedProvider for ClosureProvider<T, C>
+impl<T, C> TypedSharedProvider for RawClosureProvider<T, C>
 where
     T: SharedManaged,
-    C: Fn(&dyn Injector) -> Result<T, InjectorError> + Send + Sync + 'static,
+    C: RawClosure<Constructed = T>,
 {
 }
 
@@ -69,7 +70,7 @@ mod tests {
     #[test]
     fn closure_provider_succeeds() {
         let injector = MockInjector::new();
-        let provider = ClosureProvider::new(|_| Ok(42i32));
+        let provider = RawClosureProvider::new(|_| Ok(42i32));
 
         let res = provider.provide(&injector, &CallContext::new(&key::of::<i32>()));
         assert_eq!(res.unwrap(), 42);

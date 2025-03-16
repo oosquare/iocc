@@ -70,7 +70,8 @@ mod tests {
     use crate::container::injector::TypedInjector;
     use crate::container::registry::{Configurer, TypedConfigurer};
     use crate::key;
-    use crate::provider::{Component, ComponentProvider, InstanceProvider};
+    use crate::provider::component::{Component, ComponentProvider};
+    use crate::provider::instance::InstanceProvider;
     use crate::scope::SingletonScope;
 
     use super::*;
@@ -102,7 +103,7 @@ mod tests {
     }
 
     impl Component for TestObject {
-        type Output = Arc<Self>;
+        type Constructed = Arc<Self>;
 
         type Error = Infallible;
 
@@ -113,7 +114,7 @@ mod tests {
             Ok(Ok(Self::new(injector.get(&key::of())?)))
         }
 
-        fn post_process(self) -> Self::Output {
+        fn post_process(self) -> Self::Constructed {
             Arc::new(self)
         }
     }

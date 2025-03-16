@@ -3,17 +3,17 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::container::injector::{Injector, InjectorError};
 use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
 use crate::key;
-use crate::module::dsl::closure_helper::ClosureBinding;
 use crate::module::dsl::component_helper::ComponentBinding;
 use crate::module::dsl::instance_helper::InstanceBinding;
 use crate::module::dsl::provider_helper::ProviderBinding;
+use crate::module::dsl::raw_closure_helper::RawClosureBinding;
 use crate::module::dsl::ToLifetime;
+use crate::provider::closure::RawClosure;
+use crate::provider::component::{Component, ComponentProvider};
 use crate::provider::TypedProvider;
-use crate::provider::{Component, ComponentProvider};
 use crate::scope::{Scope, Transient};
 
 #[allow(private_bounds)]
@@ -63,16 +63,16 @@ where
 
     pub fn to_component<C>(self) -> ComponentBinding<C, KQ, L>
     where
-        C: Component<Output = KT>,
+        C: Component<Constructed = KT>,
     {
         ComponentBinding::new(self.qualifier, self.lifetime)
     }
 
-    pub fn to_closure<C>(self, closure: C) -> ClosureBinding<KT, KQ, L, C>
+    pub fn to_raw_closure<C>(self, closure: C) -> RawClosureBinding<KT, KQ, L, C>
     where
-        C: Fn(&dyn Injector) -> Result<KT, InjectorError> + Send + Sync + 'static,
+        C: RawClosure<Constructed = KT>,
     {
-        ClosureBinding::new(closure, self.qualifier, self.lifetime)
+        RawClosureBinding::new(closure, self.qualifier, self.lifetime)
     }
 
     pub fn to_instance(self, instance: KT) -> InstanceBinding<KT, KQ, L>
@@ -92,7 +92,7 @@ where
 
 impl<KT, KQ, S> MetadataBinding<KT, KQ, S>
 where
-    KT: SharedManaged + Component<Output = KT>,
+    KT: SharedManaged + Component<Constructed = KT>,
     KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
     S: Scope,
 {
@@ -105,7 +105,7 @@ where
 
 impl<C, KQ, S> MetadataBinding<Arc<C>, KQ, S>
 where
-    C: Component<Output = Arc<C>>,
+    C: Component<Constructed = Arc<C>>,
     KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
     S: Scope,
 {
@@ -118,7 +118,7 @@ where
 
 impl<KT, KQ> MetadataBinding<KT, KQ, Transient>
 where
-    KT: Component<Output = KT>,
+    KT: Component<Constructed = KT>,
     KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
 {
     pub fn set_on<S>(self, configurer: &mut dyn Configurer<Scope = S>)

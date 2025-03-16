@@ -8,7 +8,7 @@ use crate::container::{Managed, SharedManaged};
 use crate::provider::{CallContext, TypedProvider, TypedSharedProvider};
 
 pub trait Component: Managed + Sized {
-    type Output: Managed;
+    type Constructed: Managed;
 
     type Error: Into<Box<dyn Error + Send + Sync>>;
 
@@ -16,7 +16,7 @@ pub trait Component: Managed + Sized {
     where
         I: TypedInjector + ?Sized;
 
-    fn post_process(self) -> Self::Output;
+    fn post_process(self) -> Self::Constructed;
 }
 
 pub struct ComponentProvider<C>
@@ -51,7 +51,7 @@ impl<C> TypedProvider for ComponentProvider<C>
 where
     C: Component,
 {
-    type Output = C::Output;
+    type Output = C::Constructed;
 
     fn provide<I>(
         &self,
@@ -72,7 +72,7 @@ where
     }
 }
 
-impl<C> TypedSharedProvider for ComponentProvider<C> where C: Component<Output: SharedManaged> {}
+impl<C> TypedSharedProvider for ComponentProvider<C> where C: Component<Constructed: SharedManaged> {}
 
 #[cfg(test)]
 mod tests {
@@ -92,7 +92,7 @@ mod tests {
     impl Abstract for Impl {}
 
     impl Component for Impl {
-        type Output = Arc<dyn Abstract>;
+        type Constructed = Arc<dyn Abstract>;
 
         type Error = Infallible;
 
@@ -103,7 +103,7 @@ mod tests {
             Ok(Ok(Impl))
         }
 
-        fn post_process(self) -> Self::Output {
+        fn post_process(self) -> Self::Constructed {
             Arc::new(self)
         }
     }

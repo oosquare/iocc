@@ -281,7 +281,8 @@ enum WaitResponse {
 mod tests {
     use crate::container::injector::TypedInjector;
     use crate::key;
-    use crate::provider::{ClosureProvider, InstanceProvider};
+    use crate::provider::closure::RawClosureProvider;
+    use crate::provider::instance::InstanceProvider;
     use crate::scope::WebScope;
 
     use super::*;
@@ -294,7 +295,7 @@ mod tests {
 
     impl TestObject {
         fn get_provider(id: u32) -> Box<dyn SharedProvider> {
-            Box::new(ClosureProvider::new(move |injector| {
+            Box::new(RawClosureProvider::new(move |injector| {
                 if id <= 1 {
                     Ok(Arc::new(TestObject {
                         id,
@@ -324,7 +325,7 @@ mod tests {
 
     impl RecursiveObject {
         fn get_provider() -> Box<dyn SharedProvider> {
-            Box::new(ClosureProvider::new(move |injector| {
+            Box::new(RawClosureProvider::new(move |injector| {
                 Ok(Arc::new(RecursiveObject {
                     _recursive: injector.get(&key::of())?,
                 }))
