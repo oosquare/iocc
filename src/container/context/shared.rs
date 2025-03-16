@@ -279,6 +279,8 @@ enum WaitResponse {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::Infallible;
+
     use crate::container::injector::TypedInjector;
     use crate::key;
     use crate::provider::closure::RawClosureProvider;
@@ -297,23 +299,23 @@ mod tests {
         fn get_provider(id: u32) -> Box<dyn SharedProvider> {
             Box::new(RawClosureProvider::new(move |injector| {
                 if id <= 1 {
-                    Ok(Arc::new(TestObject {
+                    Ok(Ok::<_, Infallible>(Arc::new(TestObject {
                         id,
                         sub_even: None,
                         sub_odd: None,
-                    }))
+                    })))
                 } else if id % 2 == 0 {
-                    Ok(Arc::new(TestObject {
+                    Ok(Ok::<_, Infallible>(Arc::new(TestObject {
                         id,
                         sub_even: Some(injector.get(&key::qualified(id - 2))?),
                         sub_odd: Some(injector.get(&key::qualified(id - 1))?),
-                    }))
+                    })))
                 } else {
-                    Ok(Arc::new(TestObject {
+                    Ok(Ok::<_, Infallible>(Arc::new(TestObject {
                         id,
                         sub_even: Some(injector.get(&key::qualified(id - 3))?),
                         sub_odd: Some(injector.get(&key::qualified(id - 2))?),
-                    }))
+                    })))
                 }
             }))
         }
@@ -326,9 +328,9 @@ mod tests {
     impl RecursiveObject {
         fn get_provider() -> Box<dyn SharedProvider> {
             Box::new(RawClosureProvider::new(move |injector| {
-                Ok(Arc::new(RecursiveObject {
+                Ok(Ok::<_, Infallible>(Arc::new(RecursiveObject {
                     _recursive: injector.get(&key::of())?,
-                }))
+                })))
             }))
         }
     }

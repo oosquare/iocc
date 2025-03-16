@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
+use std::sync::Arc;
 
 use crate::container::injector::{InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
@@ -44,12 +45,19 @@ where
     fn provide<I>(
         &self,
         injector: &I,
-        _context: &CallContext<'_>,
+        context: &CallContext<'_>,
     ) -> Result<Self::Output, InjectorError>
     where
         I: TypedInjector + ?Sized,
     {
-        (self.closure)(injector.upcast_dyn())
+        match (self.closure)(injector.upcast_dyn()) {
+            Ok(Ok(obj)) => Ok(obj),
+            Ok(Err(err)) => Err(InjectorError::ObjectConstruction {
+                key: context.key().dyn_clone(),
+                source: Arc::from(err.into()),
+            }),
+            Err(err) => Err(err),
+        }
     }
 }
 
@@ -62,6 +70,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::convert::Infallible;
+
     use crate::container::injector::MockInjector;
     use crate::key;
 
@@ -70,7 +80,7 @@ mod tests {
     #[test]
     fn closure_provider_succeeds() {
         let injector = MockInjector::new();
-        let provider = RawClosureProvider::new(|_| Ok(42i32));
+        let provider = RawClosureProvider::new(|_| Ok(Ok::<_, Infallible>(42i32)));
 
         let res = provider.provide(&injector, &CallContext::new(&key::of::<i32>()));
         assert_eq!(res.unwrap(), 42);

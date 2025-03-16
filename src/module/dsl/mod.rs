@@ -73,7 +73,7 @@ mod tests {
                 .set_on(configurer);
 
             bind::<i64>()
-                .to_raw_closure(|_| Ok(42))
+                .to_raw_closure(|_| Ok(Ok::<_, Infallible>(42)))
                 .qualified_by("i64")
                 .set_on(configurer);
 
