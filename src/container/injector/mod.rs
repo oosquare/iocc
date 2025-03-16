@@ -19,7 +19,7 @@ pub trait Injector: Send + Sync + 'static {
 pub trait TypedInjector: Injector {
     fn get<K>(&self, key: &K) -> Result<K::Target, InjectorError>
     where
-        K: TypedKey<Target: Managed>,
+        K: TypedKey,
     {
         match self.dyn_get(key) {
             Ok(boxed) => match boxed.downcast::<K::Target>() {
