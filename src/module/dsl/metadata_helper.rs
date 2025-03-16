@@ -11,10 +11,12 @@ use crate::module::dsl::instance_helper::InstanceBinding;
 use crate::module::dsl::provider_helper::ProviderBinding;
 use crate::module::dsl::raw_closure_helper::RawClosureBinding;
 use crate::module::dsl::ToLifetime;
-use crate::provider::closure::RawClosure;
+use crate::provider::closure::{Closure, RawClosure};
 use crate::provider::component::{Component, ComponentProvider};
 use crate::provider::TypedProvider;
 use crate::scope::{Scope, Transient};
+
+use super::closure_helper::ClosureBinding;
 
 #[allow(private_bounds)]
 pub struct MetadataBinding<KT, KQ, L>
@@ -66,6 +68,14 @@ where
         C: Component<Constructed = KT>,
     {
         ComponentBinding::new(self.qualifier, self.lifetime)
+    }
+
+    pub fn to_closure<C, D>(self, closure: C) -> ClosureBinding<KT, KQ, L, C, D>
+    where
+        C: Closure<D, Constructed = KT>,
+        D: Send + Sync + 'static,
+    {
+        ClosureBinding::new(closure, self.qualifier, self.lifetime)
     }
 
     pub fn to_raw_closure<C>(self, closure: C) -> RawClosureBinding<KT, KQ, L, C>

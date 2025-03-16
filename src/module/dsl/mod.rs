@@ -1,3 +1,4 @@
+pub mod closure_helper;
 pub mod component_helper;
 pub mod instance_helper;
 pub mod metadata_helper;
@@ -71,6 +72,10 @@ mod tests {
                 .within(WebScope::Singleton)
                 .to_component::<TestDynObject>()
                 .set_on(configurer);
+
+            bind::<(TestObject, Arc<dyn TestTrait>)>()
+                .to_closure(|a: TestObject, b: Arc<dyn TestTrait>| Ok::<_, Infallible>((a, b)))
+                .as_transient();
 
             bind::<i64>()
                 .to_raw_closure(|_| Ok(Ok::<_, Infallible>(42)))
