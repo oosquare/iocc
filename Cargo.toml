@@ -1,16 +1,18 @@
-[package]
-name = "iocc"
+[workspace]
+members = [
+  "src/iocc"
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-description = "Minimal dependency injection framework"
 authors = ["Justin Chen oosquare@outlook.com"]
 repository = "https://github.com/oosquare/iocc"
 
-[dependencies]
+[workspace.dependencies]
+mockall = "0.13.1"
 oneshot = { version = "0.1.11", features = ["std"] }
 parking_lot = "0.12.3"
 snafu = "0.8.5"
-
-[dev-dependencies]
-mockall = "0.13.1"
