@@ -48,10 +48,20 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 name = "iocc"
 version = "0.1.0"
 dependencies = [
+ "iocc-derive",
  "mockall",
  "oneshot",
  "parking_lot",
  "snafu",
+]
+
+[[package]]
+name = "iocc-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

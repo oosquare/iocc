@@ -11,6 +11,7 @@ description = "Minimal dependency injection framework"
 oneshot.workspace = true
 parking_lot.workspace = true
 snafu.workspace = true
+iocc-derive = { path = "../iocc-derive" }
 
 [dev-dependencies]
 mockall.workspace = true
