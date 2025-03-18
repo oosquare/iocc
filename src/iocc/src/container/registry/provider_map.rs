@@ -37,12 +37,12 @@ impl<S: Scope> ProviderMap<S> {
 
     pub fn get(&self, key: &dyn Key) -> Option<&ProviderEntry<S>> {
         self.providers
-            .get(&key.target())
+            .get(&key.target_type())
             .and_then(|slot| slot.get(key))
     }
 
     fn insert_impl(&mut self, provider: ProviderEntry<S>) -> Option<ProviderEntry<S>> {
-        let target = provider.dyn_key().target();
+        let target = provider.dyn_key().target_type();
         if let Some(slot) = self.providers.get_mut(&target) {
             slot.insert(provider)
         } else {

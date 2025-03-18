@@ -5,12 +5,12 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 use crate::container::Managed;
-use crate::key::{Key, TypedKey};
+use crate::key::{Key, TypedKey, TypedQualifier};
 
 pub struct KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
     qualifier: Q,
     _marker: PhantomData<T>,
@@ -19,7 +19,7 @@ where
 impl<T, Q> KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
     pub fn new(qualifier: Q) -> Self {
         Self {
@@ -32,7 +32,7 @@ where
 impl<T, Q> Clone for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
     fn clone(&self) -> Self {
         *self
@@ -42,7 +42,7 @@ where
 impl<T, Q> Copy for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
 }
 
@@ -50,14 +50,14 @@ where
 unsafe impl<T, Q> Sync for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
 }
 
 impl<T, Q> Debug for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         Display::fmt(self, f)
@@ -67,7 +67,7 @@ where
 impl<T, Q> Display for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(f, "{}@{:?}", any::type_name::<T>(), self.qualifier)
@@ -77,7 +77,7 @@ where
 impl<T, Q> PartialEq for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
     fn eq(&self, other: &Self) -> bool {
         self.qualifier.eq(&other.qualifier)
@@ -87,14 +87,14 @@ where
 impl<T, Q> Eq for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
 }
 
 impl<T, Q> Hash for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.qualifier.hash(state);
@@ -104,7 +104,7 @@ where
 impl<T, Q> Borrow<dyn Key> for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
     fn borrow(&self) -> &dyn Key {
         self
@@ -114,7 +114,7 @@ where
 impl<T, Q> TypedKey for KeyImpl<T, Q>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    Q: TypedQualifier,
 {
     type Target = T;
 
@@ -125,6 +125,10 @@ where
         Self: Sized,
     {
         self.qualifier
+    }
+
+    fn qualifier_ref(&self) -> &Self::Qualifier {
+        &self.qualifier
     }
 }
 
@@ -140,9 +144,9 @@ mod tests {
         let i32_name1_key: Box<dyn Key> = Box::new(KeyImpl::<i32, _>::new("name1"));
         let i32_name2_key: Box<dyn Key> = Box::new(KeyImpl::<i32, _>::new("name2"));
 
-        assert_eq!(i32_key.target(), TypeId::of::<i32>());
-        assert_eq!(i32_name1_key.target(), TypeId::of::<i32>());
-        assert_eq!(i32_name2_key.target(), TypeId::of::<i32>());
+        assert_eq!(i32_key.target_type(), TypeId::of::<i32>());
+        assert_eq!(i32_name1_key.target_type(), TypeId::of::<i32>());
+        assert_eq!(i32_name2_key.target_type(), TypeId::of::<i32>());
     }
 
     #[test]

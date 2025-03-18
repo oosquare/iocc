@@ -14,7 +14,11 @@ pub trait Key
 where
     Self: Debug + Display + AsAny + DynHash + Send + Sync + 'static,
 {
-    fn target(&self) -> TypeId;
+    fn target_type(&self) -> TypeId;
+
+    fn qualifier_type(&self) -> TypeId;
+
+    fn dyn_qualifier(&self) -> &dyn Qualifier;
 
     fn dyn_clone(&self) -> Box<dyn Key>;
 }
@@ -34,8 +38,16 @@ impl Hash for dyn Key {
 }
 
 impl<T: TypedKey> Key for T {
-    fn target(&self) -> TypeId {
+    fn target_type(&self) -> TypeId {
         TypeId::of::<T::Target>()
+    }
+
+    fn qualifier_type(&self) -> TypeId {
+        TypeId::of::<T::Qualifier>()
+    }
+
+    fn dyn_qualifier(&self) -> &dyn Qualifier {
+        self.qualifier_ref()
     }
 
     fn dyn_clone(&self) -> Box<dyn Key> {
@@ -46,9 +58,42 @@ impl<T: TypedKey> Key for T {
 pub trait TypedKey: Key + Copy + Eq + Hash {
     type Target: Managed;
 
-    type Qualifier: Copy + Debug + Eq + Hash + Send + Sync + 'static;
+    type Qualifier: TypedQualifier;
 
     fn qualifier(&self) -> Self::Qualifier;
+
+    fn qualifier_ref(&self) -> &Self::Qualifier;
+}
+
+pub trait Qualifier
+where
+    Self: Debug + AsAny + DynHash + Send + Sync + 'static,
+{
+    fn dyn_clone(&self) -> Box<dyn Qualifier>;
+}
+
+impl PartialEq for dyn Qualifier {
+    fn eq(&self, other: &Self) -> bool {
+        self.dyn_eq(other.as_any())
+    }
+}
+
+impl Eq for dyn Qualifier {}
+
+impl Hash for dyn Qualifier {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.dyn_hash(state);
+    }
+}
+
+pub trait TypedQualifier: Qualifier + Copy + Eq + Hash {}
+
+impl<T> TypedQualifier for T where T: Debug + Copy + Eq + Hash + Send + Sync + 'static {}
+
+impl<T: TypedQualifier> Qualifier for T {
+    fn dyn_clone(&self) -> Box<dyn Qualifier> {
+        Box::new(*self)
+    }
 }
 
 pub fn of<T>() -> impl TypedKey<Target = T, Qualifier = ()>

@@ -21,7 +21,7 @@ impl ObjectMap {
         key: Box<dyn Key>,
         object: Box<dyn SharedManaged>,
     ) -> Option<ObjectEntry> {
-        let target = key.target();
+        let target = key.target_type();
         if let Some(slot) = self.objects.get_mut(&target) {
             slot.insert(key, ObjectEntry(object))
         } else {
@@ -33,7 +33,7 @@ impl ObjectMap {
 
     pub fn get(&self, key: &dyn Key) -> Option<&ObjectEntry> {
         self.objects
-            .get(&key.target())
+            .get(&key.target_type())
             .and_then(|slot| slot.get(key))
     }
 }
