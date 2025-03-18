@@ -1,4 +1,4 @@
-use std::any::{self, Any, TypeId};
+use std::any::{self, Any};
 use std::ops::{Deref, DerefMut};
 
 pub trait AsAny: Any {
@@ -31,8 +31,6 @@ pub trait AsAny: Any {
     fn into_any_send_sync(self: Box<Self>) -> Box<dyn Any + Send + Sync>
     where
         Self: Send + Sync;
-
-    fn type_id(&self) -> TypeId;
 
     fn type_name(&self) -> &'static str;
 }
@@ -99,11 +97,6 @@ impl<T: Any> AsAny for T {
         Self: Send + Sync,
     {
         self
-    }
-
-    #[inline]
-    fn type_id(&self) -> TypeId {
-        TypeId::of::<T>()
     }
 
     #[inline]

@@ -19,4 +19,4 @@ parking_lot = "0.12.3"
 proc-macro2 = "1.0.94"
 quote = "1.0.40"
 snafu = "0.8.5"
-syn = { version = "2.0.100", features = ["extra-traits"] }
+syn = { version = "2.0.100", features = ["full", "extra-traits"] }

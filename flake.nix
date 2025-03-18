@@ -28,7 +28,7 @@
         in
           mkShell {
             buildInputs = [ rust ];
-            packages = with pkgs; [ nil ];
+            packages = with pkgs; [ nil cargo-expand ];
           };
       };
     };
