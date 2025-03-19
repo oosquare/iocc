@@ -78,13 +78,6 @@ pub enum InjectorError {
         lifetime: &'static str,
         scope: &'static str,
     },
-    #[snafu(display("could not get the object {key} from the adapter's inner"))]
-    #[non_exhaustive]
-    AdapterInner {
-        key: Box<dyn Key>,
-        #[snafu(source(from(InjectorError, Arc::new)))]
-        source: Arc<InjectorError>,
-    },
     #[snafu(display("could not construct the object {key}"))]
     #[non_exhaustive]
     ObjectConstruction {
@@ -110,10 +103,6 @@ impl Clone for InjectorError {
                 key: key.dyn_clone(),
                 lifetime,
                 scope,
-            },
-            Self::AdapterInner { key, source } => Self::AdapterInner {
-                key: key.dyn_clone(),
-                source: Arc::clone(source),
             },
             Self::ObjectConstruction { key, source } => Self::ObjectConstruction {
                 key: key.dyn_clone(),
