@@ -117,7 +117,7 @@ mod tests {
         where
             I: TypedInjector + ?Sized,
         {
-            Ok(Ok(Self::new(injector.get(&key::of())?)))
+            Ok(Ok(Self::new(injector.get(key::of())?)))
         }
 
         fn post_process(self) -> Self::Constructed {
@@ -154,7 +154,7 @@ mod tests {
     fn container_operations_succeeds() {
         let container = Container::init(TestModule).unwrap();
 
-        let object: Arc<TestObject> = container.get(&key::of()).unwrap();
+        let object: Arc<TestObject> = container.get(key::of()).unwrap();
         assert_eq!(object.get(), 0);
         assert_eq!(object.name(), "test-object");
         object.set(42);
@@ -162,14 +162,14 @@ mod tests {
         thread::spawn({
             let container = container.clone();
             move || {
-                let object: Arc<TestObject> = container.get(&key::of()).unwrap();
+                let object: Arc<TestObject> = container.get(key::of()).unwrap();
                 assert_eq!(object.get(), 42);
             }
         });
         thread::spawn({
             let container = container.clone();
             move || {
-                let object: Arc<TestObject> = container.get(&key::of()).unwrap();
+                let object: Arc<TestObject> = container.get(key::of()).unwrap();
                 assert_eq!(object.name(), "test-object");
             }
         });

@@ -312,14 +312,14 @@ mod tests {
                 } else if id % 2 == 0 {
                     Ok(Ok::<_, Infallible>(Arc::new(TestObject {
                         id,
-                        sub_even: Some(injector.get(&key::qualified(id - 2))?),
-                        sub_odd: Some(injector.get(&key::qualified(id - 1))?),
+                        sub_even: Some(injector.get(key::qualified(id - 2))?),
+                        sub_odd: Some(injector.get(key::qualified(id - 1))?),
                     })))
                 } else {
                     Ok(Ok::<_, Infallible>(Arc::new(TestObject {
                         id,
-                        sub_even: Some(injector.get(&key::qualified(id - 3))?),
-                        sub_odd: Some(injector.get(&key::qualified(id - 2))?),
+                        sub_even: Some(injector.get(key::qualified(id - 3))?),
+                        sub_odd: Some(injector.get(key::qualified(id - 2))?),
                     })))
                 }
             }))
@@ -334,7 +334,7 @@ mod tests {
         fn get_provider() -> Box<dyn SharedProvider> {
             Box::new(RawClosureProvider::new(move |injector| {
                 Ok(Ok::<_, Infallible>(Arc::new(RecursiveObject {
-                    _recursive: injector.get(&key::of())?,
+                    _recursive: injector.get(key::of())?,
                 })))
             }))
         }
@@ -354,8 +354,8 @@ mod tests {
         let sub_context = Arc::new(SharedContext::new_sub(Arc::clone(&root_context)).unwrap());
         let key = key::qualified::<Arc<TestObject>, _>(0u32);
 
-        let _ = sub_context.get(&key).unwrap();
-        let object = sub_context.get(&key).unwrap();
+        let _ = sub_context.get(key).unwrap();
+        let object = sub_context.get(key).unwrap();
         assert_eq!(object.id, 0u32);
 
         let managed = root_context.managed.read();
@@ -389,7 +389,7 @@ mod tests {
         for i in (0..NUM).rev() {
             let ctx = Arc::clone(&context);
             handles.push(thread::spawn(move || {
-                let object: Arc<TestObject> = ctx.get(&key::qualified(2 * i)).unwrap();
+                let object: Arc<TestObject> = ctx.get(key::qualified(2 * i)).unwrap();
                 assert_eq!(object.id, 2 * i);
                 assert!(object
                     .sub_even
@@ -403,7 +403,7 @@ mod tests {
 
             let ctx = Arc::clone(&context);
             handles.push(thread::spawn(move || {
-                let object: Arc<TestObject> = ctx.get(&key::qualified(2 * i + 1)).unwrap();
+                let object: Arc<TestObject> = ctx.get(key::qualified(2 * i + 1)).unwrap();
                 assert_eq!(object.id, 2 * i + 1);
                 assert!(object
                     .sub_even
@@ -437,11 +437,11 @@ mod tests {
         let context = SharedContext::new_root(Arc::new(providers));
 
         assert!(matches!(
-            context.get(&key::qualified::<Arc<TestObject>, u32>(0)),
+            context.get(key::qualified::<Arc<TestObject>, u32>(0)),
             Err(InjectorError::ShortLifetime { .. })
         ));
         assert!(matches!(
-            context.get(&key::of::<i32>()),
+            context.get(key::of::<i32>()),
             Err(InjectorError::ShortLifetime { .. })
         ));
     }
@@ -458,7 +458,7 @@ mod tests {
         let context = SharedContext::new_root(Arc::new(providers));
 
         assert!(matches!(
-            context.get(&key::of::<Arc<RecursiveObject>>()),
+            context.get(key::of::<Arc<RecursiveObject>>()),
             Err(InjectorError::CyclicDependency { .. })
         ));
     }
@@ -469,7 +469,7 @@ mod tests {
         let context = SharedContext::new_root(Arc::new(providers));
 
         assert!(matches!(
-            context.get(&key::of::<i32>()),
+            context.get(key::of::<i32>()),
             Err(InjectorError::NotFound { .. })
         ));
     }

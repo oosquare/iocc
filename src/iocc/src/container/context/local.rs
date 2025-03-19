@@ -132,8 +132,8 @@ mod tests {
             I: TypedInjector + ?Sized,
         {
             Ok(Ok(Self {
-                a: injector.get(&key::of())?,
-                b: injector.get(&key::of())?,
+                a: injector.get(key::of())?,
+                b: injector.get(key::of())?,
             }))
         }
 
@@ -156,7 +156,7 @@ mod tests {
             I: TypedInjector + ?Sized,
         {
             Ok(Ok(Self {
-                _recursive: injector.get(&key::of())?,
+                _recursive: injector.get(key::of())?,
             }))
         }
 
@@ -184,7 +184,7 @@ mod tests {
         let root_context = SharedContext::new_root(Arc::new(providers));
         let local_context = LocalContext::new(Arc::new(root_context));
 
-        let object: TestObject = local_context.get(&key::of()).unwrap();
+        let object: TestObject = local_context.get(key::of()).unwrap();
         assert_eq!(object.a, 42i32);
         assert_eq!(object.b, "str");
     }
@@ -201,7 +201,7 @@ mod tests {
         let root_context = Arc::new(SharedContext::new_root(Arc::new(providers)));
         let local_context = LocalContext::new(Arc::clone(&root_context));
 
-        let val: Arc<i32> = local_context.get(&key::of()).unwrap();
+        let val: Arc<i32> = local_context.get(key::of()).unwrap();
         assert_eq!(*val, 42i32);
     }
 
@@ -217,7 +217,7 @@ mod tests {
         let local_context = LocalContext::new(Arc::new(root_context));
 
         assert!(matches!(
-            local_context.get(&key::of::<Box<RecursiveObject>>()),
+            local_context.get(key::of::<Box<RecursiveObject>>()),
             Err(InjectorError::CyclicDependency { .. })
         ));
     }
@@ -229,7 +229,7 @@ mod tests {
         let local_context = LocalContext::new(Arc::new(root_context));
 
         assert!(matches!(
-            local_context.get(&key::of::<i32>()),
+            local_context.get(key::of::<i32>()),
             Err(InjectorError::NotFound { .. })
         ));
     }

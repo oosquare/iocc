@@ -64,7 +64,7 @@ macro_rules! impl_closure {
                 injector: &dyn Injector,
             ) -> Result<Result<Self::Constructed, Self::Error>, InjectorError> {
                 $(
-                    let $dep = injector.get(&key::of())?;
+                    let $dep = injector.get(key::of())?;
                 )*
                 Ok(self($($dep,)*))
             }

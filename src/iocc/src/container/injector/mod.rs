@@ -22,11 +22,11 @@ pub trait Injector: Send + Sync + 'static {
 }
 
 pub trait TypedInjector: Injector {
-    fn get<K>(&self, key: &K) -> Result<K::Target, InjectorError>
+    fn get<K>(&self, key: K) -> Result<K::Target, InjectorError>
     where
         K: TypedKey,
     {
-        match self.dyn_get(key) {
+        match self.dyn_get(&key) {
             Ok(boxed) => match boxed.downcast::<K::Target>() {
                 Ok(object) => Ok(*object),
                 Err(_) => unreachable!("the object's type should be `K::Target`"),
