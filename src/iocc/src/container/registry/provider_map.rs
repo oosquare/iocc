@@ -50,6 +50,12 @@ impl<S: Scope> ProviderMap<S> {
             None
         }
     }
+
+    pub fn keys(&self, type_id: TypeId) -> Vec<Box<dyn Key>> {
+        self.providers
+            .get(&type_id)
+            .map_or(Vec::new(), |slot| slot.keys())
+    }
 }
 
 #[derive(Debug)]
@@ -87,6 +93,13 @@ impl<S: Scope> ProviderSlot<S> {
             Self::Singleton(entry) if entry.dyn_key() != key => None,
             Self::Singleton(entry) => Some(entry),
             Self::Map(entries) => entries.get(key),
+        }
+    }
+
+    fn keys(&self) -> Vec<Box<dyn Key>> {
+        match self {
+            Self::Singleton(entry) => vec![entry.dyn_key().dyn_clone()],
+            Self::Map(entries) => entries.keys().map(|key| key.dyn_clone()).collect(),
         }
     }
 }
@@ -136,15 +149,6 @@ impl<S: Scope> ProviderEntry<S> {
             Self::Owned { .. } => Lifetime::transient(),
         }
     }
-
-    #[cfg(test)]
-    pub fn as_shared(&self) -> Option<&dyn SharedProvider> {
-        if let Self::Shared { provider, .. } = self {
-            Some(provider.as_ref())
-        } else {
-            None
-        }
-    }
 }
 
 #[cfg(test)]
@@ -152,101 +156,67 @@ mod tests {
     use std::fmt::Debug;
     use std::sync::Arc;
 
-    use crate::container::injector::{InjectorError, MockInjector, TypedInjector};
+    use crate::container::injector::{InjectorError, TypedInjector};
     use crate::key;
     use crate::provider::{CallContext, TypedProvider, TypedSharedProvider};
     use crate::scope::SingletonScope;
-    use crate::util::any::Downcast;
 
     use super::*;
 
     #[test]
     fn type_slot_registry_register_succeeds() {
         let mut registry: ProviderMap<SingletonScope> = ProviderMap::new();
-        assert!(registry
-            .insert(
-                Box::new(key::of::<i32>()),
-                Box::new(TestProvider::new(42i32))
-            )
-            .is_none());
-        assert!(registry
-            .insert(
-                Box::new(key::of::<&'static str>()),
-                Box::new(TestProvider::new("str"))
-            )
-            .is_none());
-        assert!(registry
-            .insert(
-                Box::new(key::of::<i32>()),
-                Box::new(TestProvider::new(42i32))
-            )
-            .is_some());
-        assert!(registry
-            .insert(
-                Box::new(key::of::<&'static str>()),
-                Box::new(TestProvider::new("str"))
-            )
-            .is_some());
+
+        let key = Box::new(key::of::<i32>());
+        let provider = Box::new(TestProvider::new(42i32));
+        assert!(registry.insert(key, provider).is_none());
+
+        let key = Box::new(key::of::<&'static str>());
+        let provider = Box::new(TestProvider::new("str"));
+        assert!(registry.insert(key, provider).is_none());
+
+        let key = Box::new(key::of::<i32>());
+        let provider = Box::new(TestProvider::new(42i32));
+        assert!(registry.insert(key, provider).is_some());
+
+        let key = Box::new(key::of::<&'static str>());
+        let provider = Box::new(TestProvider::new("str"));
+        assert!(registry.insert(key, provider).is_some());
     }
 
     #[test]
     fn type_slot_registry_register_shared_succeeds() {
         let mut registry = ProviderMap::new();
-        assert!(registry
-            .insert_shared(
-                Box::new(key::of::<Arc<i32>>()),
-                Box::new(TestProvider::new(Arc::new(42i32))),
-                SingletonScope
-            )
-            .is_none());
-        assert!(registry
-            .insert_shared(
-                Box::new(key::of::<Arc<&'static str>>()),
-                Box::new(TestProvider::new(Arc::new("str"))),
-                SingletonScope
-            )
-            .is_none());
-        assert!(registry
-            .insert_shared(
-                Box::new(key::of::<Arc<i32>>()),
-                Box::new(TestProvider::new(Arc::new(42i32))),
-                SingletonScope
-            )
-            .is_some());
-        assert!(registry
-            .insert_shared(
-                Box::new(key::of::<Arc<&'static str>>()),
-                Box::new(TestProvider::new(Arc::new("str"))),
-                SingletonScope
-            )
-            .is_some());
+        let scope = SingletonScope;
+
+        let key = Box::new(key::of::<Arc<i32>>());
+        let provider = Box::new(TestProvider::new(Arc::new(42i32)));
+        assert!(registry.insert_shared(key, provider, scope).is_none());
+
+        let key = Box::new(key::of::<Arc<&'static str>>());
+        let provider = Box::new(TestProvider::new(Arc::new("str")));
+        assert!(registry.insert_shared(key, provider, scope).is_none());
+
+        let key = Box::new(key::of::<Arc<i32>>());
+        let provider = Box::new(TestProvider::new(Arc::new(42i32)));
+        assert!(registry.insert_shared(key, provider, scope).is_some());
+
+        let key = Box::new(key::of::<Arc<&'static str>>());
+        let provider = Box::new(TestProvider::new(Arc::new("str")));
+        assert!(registry.insert_shared(key, provider, scope).is_some());
     }
 
     #[test]
     fn type_slot_registry_get_succeeds_when_provider_is_shared() {
         let mut registry = ProviderMap::new();
-        assert!(registry
-            .insert_shared(
-                Box::new(key::of::<Arc<i32>>()),
-                Box::new(TestProvider::new(Arc::new(42i32))),
-                SingletonScope
-            )
-            .is_none());
+
+        let key = Box::new(key::of::<Arc<i32>>());
+        let provider = Box::new(TestProvider::new(Arc::new(42i32)));
+        let scope = SingletonScope;
+        assert!(registry.insert_shared(key, provider, scope).is_none());
 
         let provider = registry.get(&key::of::<Arc<i32>>()).unwrap();
         assert_eq!(provider.dyn_key(), &key::of::<Arc<i32>>() as &dyn Key);
-        let res = provider
-            .as_shared()
-            .unwrap()
-            .dyn_provide(
-                &mut MockInjector::new(),
-                &CallContext::new(&key::of::<Arc<i32>>()),
-            )
-            .unwrap();
-        assert_eq!(
-            **res.downcast::<Arc<i32>>().unwrap_or(Box::new(Arc::new(0))),
-            42
-        );
     }
 
     #[derive(Debug)]

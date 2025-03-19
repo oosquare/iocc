@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::sync::Arc;
 
 use crate::container::context::{LocalContext, SharedContext};
@@ -57,10 +58,15 @@ impl<S: Scope> Injector for Container<S> {
     fn dyn_get(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
         self.context.dyn_get(key)
     }
+
+    fn keys(&self, type_id: TypeId) -> Vec<Box<dyn Key>> {
+        self.context.shared_ref().keys(type_id)
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::convert::Infallible;
     use std::error::Error;
     use std::thread;
@@ -69,7 +75,7 @@ mod tests {
 
     use crate::container::injector::TypedInjector;
     use crate::container::registry::{Configurer, TypedConfigurer};
-    use crate::key;
+    use crate::key::{self, KeyTypePattern};
     use crate::provider::component::{Component, ComponentProvider};
     use crate::provider::instance::InstanceProvider;
     use crate::scope::SingletonScope;
@@ -138,6 +144,8 @@ mod tests {
                 InstanceProvider::new(Arc::new(String::from("test-object"))),
                 SingletonScope,
             );
+            configurer.register(key::named::<i32>("1"), InstanceProvider::new(1));
+            configurer.register(key::named::<i32>("2"), InstanceProvider::new(2));
             Ok(())
         }
     }
@@ -165,5 +173,9 @@ mod tests {
                 assert_eq!(object.name(), "test-object");
             }
         });
+
+        let objects: HashMap<&'static str, i32> = container.collect(KeyTypePattern::new()).unwrap();
+        assert_eq!(objects.get(&"1"), Some(&1));
+        assert_eq!(objects.get(&"2"), Some(&2));
     }
 }

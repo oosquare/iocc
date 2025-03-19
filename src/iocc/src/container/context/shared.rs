@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread::{self, ThreadId};
@@ -226,6 +227,10 @@ impl<S: Scope> SharedContext<S> {
 impl<S: Scope> Injector for SharedContext<S> {
     fn dyn_get(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
         self.get_object(key)
+    }
+
+    fn keys(&self, type_id: TypeId) -> Vec<Box<dyn Key>> {
+        self.providers.keys(type_id)
     }
 }
 

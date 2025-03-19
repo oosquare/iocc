@@ -1,13 +1,14 @@
 mod collect;
 mod object_map;
 
+use std::any::TypeId;
 use std::error::Error;
 use std::sync::Arc;
 
 use snafu::prelude::*;
 
 use crate::container::Managed;
-use crate::key::{Key, TypedKey};
+use crate::key::{Key, Pattern, TypedKey};
 use crate::util::any::Downcast;
 
 pub use collect::Collect;
@@ -16,6 +17,8 @@ pub(super) use object_map::ObjectMap;
 #[cfg_attr(test, mockall::automock)]
 pub trait Injector: Send + Sync + 'static {
     fn dyn_get(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError>;
+
+    fn keys(&self, type_id: TypeId) -> Vec<Box<dyn Key>>;
 }
 
 pub trait TypedInjector: Injector {
@@ -30,6 +33,15 @@ pub trait TypedInjector: Injector {
             },
             Err(err) => Err(err),
         }
+    }
+
+    fn collect<C, P>(&self, pattern: P) -> Result<C, InjectorError>
+    where
+        C: Collect<P>,
+        P: Pattern,
+    {
+        let keys = self.keys(TypeId::of::<P::Target>());
+        C::collect(self, keys.iter().map(AsRef::as_ref), pattern)
     }
 
     fn upcast_dyn(&self) -> &dyn Injector;

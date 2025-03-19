@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -26,6 +27,10 @@ impl<S: Scope> LocalContext<S> {
 
     pub fn shared(&self) -> Arc<SharedContext<S>> {
         Arc::clone(&self.shared)
+    }
+
+    pub fn shared_ref(&self) -> &SharedContext<S> {
+        &self.shared
     }
 
     pub fn current_scope(&self) -> S {
@@ -80,6 +85,10 @@ impl<S: Scope> LocalContext<S> {
 impl<S: Scope> Injector for LocalContext<S> {
     fn dyn_get(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
         self.get_object(key)
+    }
+
+    fn keys(&self, type_id: TypeId) -> Vec<Box<dyn Key>> {
+        self.shared.keys(type_id)
     }
 }
 
