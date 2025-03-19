@@ -1,3 +1,4 @@
+mod collect;
 mod object_map;
 
 use std::error::Error;
@@ -9,6 +10,7 @@ use crate::container::Managed;
 use crate::key::{Key, TypedKey};
 use crate::util::any::Downcast;
 
+pub use collect::Collect;
 pub(super) use object_map::ObjectMap;
 
 #[cfg_attr(test, mockall::automock)]
