@@ -1,4 +1,5 @@
 mod implementation;
+mod pattern;
 
 use std::any::TypeId;
 use std::fmt::{Debug, Display};
@@ -9,6 +10,7 @@ use crate::util::any::AsAny;
 use crate::util::hash::DynHash;
 
 pub(crate) use crate::key::implementation::KeyImpl;
+pub use crate::key::pattern::{AnyPattern, KeyTypePattern, Pattern};
 
 pub trait Key
 where
@@ -70,6 +72,8 @@ where
     Self: Debug + AsAny + DynHash + Send + Sync + 'static,
 {
     fn dyn_clone(&self) -> Box<dyn Qualifier>;
+
+    fn upcast_dyn(&self) -> &dyn Qualifier;
 }
 
 impl PartialEq for dyn Qualifier {
@@ -93,6 +97,10 @@ impl<T> TypedQualifier for T where T: Debug + Copy + Eq + Hash + Send + Sync + '
 impl<T: TypedQualifier> Qualifier for T {
     fn dyn_clone(&self) -> Box<dyn Qualifier> {
         Box::new(*self)
+    }
+
+    fn upcast_dyn(&self) -> &dyn Qualifier {
+        self
     }
 }
 
