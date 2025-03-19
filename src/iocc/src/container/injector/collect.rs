@@ -1,4 +1,4 @@
-use std::any::TypeId;
+use std::any::{self, TypeId};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, LinkedList, VecDeque};
 use std::hash::Hash;
 
@@ -29,7 +29,7 @@ macro_rules! impl_collect_for_non_map_collections {
                 I: TypedInjector + ?Sized,
                 KI: Iterator<Item = &'a dyn Key>,
             {
-                keys.filter(|key| key.target_type() == TypeId::of::<T>())
+                let collection = keys.filter(|key| key.target_type() == TypeId::of::<T>())
                     .filter(move |key| pattern.matches(*key))
                     .map(|key| {
                         injector.dyn_get(key).map(|object| {
@@ -38,7 +38,16 @@ macro_rules! impl_collect_for_non_map_collections {
                                 .unwrap_or_else(|_| unreachable!("in impl `Collect<P>` for non-maps, `object` should be `Box<T>`"))
                         })
                     })
-                    .collect()
+                    .collect::<Result<Self, InjectorError>>()?;
+
+                if !collection.is_empty() {
+                    Ok(collection)
+                } else {
+                    Err(InjectorError::EmptyCollection {
+                        collection: any::type_name::<Self>(),
+                        pattern: any::type_name::<P>(),
+                    })
+                }
             }
         }
     };
@@ -64,7 +73,7 @@ macro_rules! impl_collect_for_maps {
                 I: TypedInjector + ?Sized,
                 KI: Iterator<Item = &'a dyn Key>,
             {
-                keys.filter(|key| key.target_type() == TypeId::of::<T>())
+                let collection = keys.filter(|key| key.target_type() == TypeId::of::<T>())
                     .filter(|key| key.qualifier_type() == TypeId::of::<Q>())
                     .filter(move |key| pattern.matches(*key))
                     .map(|key| {
@@ -79,7 +88,16 @@ macro_rules! impl_collect_for_maps {
                         (qualifier, res)
                     })
                     .map(|(qualifier, res)| res.map(|object| (qualifier, object)))
-                    .collect()
+                    .collect::<Result<Self, InjectorError>>()?;
+
+                if !collection.is_empty() {
+                    Ok(collection)
+                } else {
+                    Err(InjectorError::EmptyCollection {
+                        collection: any::type_name::<Self>(),
+                        pattern: any::type_name::<P>(),
+                    })
+                }
             }
         }
     };
@@ -98,7 +116,7 @@ where
         I: TypedInjector + ?Sized,
         KI: Iterator<Item = &'a dyn Key>,
     {
-        keys.filter(|key| key.target_type() == TypeId::of::<T>())
+        let collection = keys.filter(|key| key.target_type() == TypeId::of::<T>())
             .filter(move |key| pattern.matches(*key))
             .map(|key| {
                 let qualifier = key.dyn_qualifier().dyn_clone();
@@ -110,12 +128,23 @@ where
                 (qualifier, res)
             })
             .map(|(qualifier, res)| res.map(|object| (qualifier, object)))
-            .collect()
+            .collect::<Result<Self, InjectorError>>()?;
+
+        if !collection.is_empty() {
+            Ok(collection)
+        } else {
+            Err(InjectorError::EmptyCollection {
+                collection: any::type_name::<Self>(),
+                pattern: any::type_name::<P>(),
+            })
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::iter;
+
     use crate::container::injector::MockInjector;
     use crate::key::{self, AnyPattern, KeyTypePattern};
 
@@ -154,6 +183,15 @@ mod tests {
         let objects: HashMap<_, i32> = Collect::collect(&injector, keys.clone(), pattern).unwrap();
         assert_eq!(objects.get("1"), Some(&1i32));
         assert_eq!(objects.get("2"), Some(&2i32));
+    }
+
+    #[test]
+    fn vec_collect_fails_when_no_matching_key_exists() {
+        let injector = make_injector();
+        let keys = iter::empty();
+        let pattern = AnyPattern::new();
+        let res: Result<Vec<f64>, _> = Collect::collect(&injector, keys, pattern);
+        assert!(matches!(res, Err(InjectorError::EmptyCollection { .. })));
     }
 
     fn make_keys() -> Vec<Box<dyn Key>> {

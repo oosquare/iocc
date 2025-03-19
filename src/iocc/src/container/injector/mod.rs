@@ -68,6 +68,12 @@ pub enum InjectorError {
     #[snafu(display("could not find the object identified by the given key {key}"))]
     #[non_exhaustive]
     NotFound { key: Box<dyn Key> },
+    #[snafu(display("could not gather any object matching {pattern} to a {collection}"))]
+    #[non_exhaustive]
+    EmptyCollection {
+        collection: &'static str,
+        pattern: &'static str,
+    },
     #[snafu(display("could not construct the object {key} which depends on itself somehow"))]
     #[non_exhaustive]
     CyclicDependency { key: Box<dyn Key> },
@@ -91,6 +97,13 @@ impl Clone for InjectorError {
         match self {
             Self::NotFound { key } => Self::NotFound {
                 key: key.dyn_clone(),
+            },
+            Self::EmptyCollection {
+                collection,
+                pattern,
+            } => Self::EmptyCollection {
+                collection,
+                pattern,
             },
             Self::CyclicDependency { key } => Self::CyclicDependency {
                 key: key.dyn_clone(),
