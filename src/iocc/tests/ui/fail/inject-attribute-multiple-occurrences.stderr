@@ -1,0 +1,5 @@
+error: only one associated function can be annotated with `#[inject]`
+ --> tests/ui/fail/inject-attribute-multiple-occurrences.rs:6:1
+  |
+6 | impl Test {
+  | ^^^^

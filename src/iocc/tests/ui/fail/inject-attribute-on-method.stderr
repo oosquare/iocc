@@ -1,0 +1,5 @@
+error: method is not allowed to be annotated with `#[inject]`
+ --> tests/ui/fail/inject-attribute-on-method.rs:8:19
+  |
+8 |     pub fn method(self) -> Self {
+  |                   ^^^^

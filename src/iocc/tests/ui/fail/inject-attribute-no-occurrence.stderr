@@ -1,0 +1,5 @@
+error: no associated function is annotated with `#[inject]`
+ --> tests/ui/fail/inject-attribute-no-occurrence.rs:6:1
+  |
+6 | impl Test {}
+  | ^^^^

@@ -1,0 +1,7 @@
+error: expects an output type and a post-processor function, seperated by a comma
+ --> tests/ui/fail/component-attribute-arguments.rs:5:1
+  |
+5 | #[component(Box<Test>)]
+  | ^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `component` (in Nightly builds, run with -Z macro-backtrace for more info)

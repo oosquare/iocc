@@ -1,0 +1,5 @@
+error: a constructor's return type should be `Self` or `Result<Self, E>`
+ --> tests/ui/fail/inject-attribute-invalid-return-type.rs:8:21
+  |
+8 |     pub fn new() -> Option<Self> {
+  |                     ^^^^^^

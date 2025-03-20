@@ -58,7 +58,7 @@ pub fn expand_implementation(
         Err(err) => {
             return Err(SynError::new(
                 err.span(),
-                "#[component] should be annotated on the `impl` block",
+                "`#[component]` should be annotated on the `impl` block",
             ))
         }
     };

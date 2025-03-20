@@ -15,4 +15,5 @@ iocc-derive = { path = "../iocc-derive" }
 
 [dev-dependencies]
 mockall.workspace = true
+trybuild.workspace = true
 

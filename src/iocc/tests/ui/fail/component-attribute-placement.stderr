@@ -1,0 +1,5 @@
+error: `#[component]` should be annotated on the `impl` block
+ --> tests/ui/fail/component-attribute-placement.rs:4:1
+  |
+4 | struct Test;
+  | ^^^^^^
