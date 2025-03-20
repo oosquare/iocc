@@ -1,3 +1,5 @@
+#![allow(clippy::if_same_then_else)]
+
 mod attrs;
 mod impls;
 

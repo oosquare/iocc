@@ -126,14 +126,10 @@ fn filter_and_map_item_fn(item: &ImplItem) -> Option<&ImplItemFn> {
 }
 
 fn is_annotated_with_inject(item_fn: &&ImplItemFn) -> bool {
-    item_fn
-        .attrs
-        .iter()
-        .find(|&attr| {
-            let content = attr.meta.to_token_stream().to_string();
-            &content == "inject"
-        })
-        .is_some()
+    item_fn.attrs.iter().any(|attr| {
+        let content = attr.meta.to_token_stream().to_string();
+        &content == "inject"
+    })
 }
 
 fn parse_constructor(self_type: TypePath, signature: Signature) -> SynResult<ConstructorData> {
@@ -232,7 +228,7 @@ fn parse_result_return_type(
 
         let segments = &first_type.path.segments;
 
-        if &first_type == &self_type {
+        if first_type == self_type {
             Ok(ReturnTypeData::Result {
                 error_type: second_path.clone(),
             })
@@ -262,7 +258,7 @@ fn expand_component_implementation(
     let constructor = &ctor_data.identifier;
 
     let associated_type_constructed = if let AttributeData::Full { output_type, .. } = &attr_data {
-        let output_type = syn::parse_str::<TypePath>(&output_type).unwrap();
+        let output_type = syn::parse_str::<TypePath>(output_type).unwrap();
         quote! { type Constructed = #output_type; }
     } else {
         quote! { type Constructed = #self_type; }
@@ -300,7 +296,7 @@ fn expand_component_implementation(
     };
 
     let post_process_body = if let AttributeData::Full { post_processor, .. } = &attr_data {
-        let post_processor = syn::parse_str::<Path>(&post_processor).unwrap();
+        let post_processor = syn::parse_str::<Path>(post_processor).unwrap();
         quote! { #post_processor(self) }
     } else {
         quote! { self }
