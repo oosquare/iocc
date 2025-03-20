@@ -7,8 +7,8 @@ use syn::{
     token::Comma,
     visit_mut::{self, VisitMut},
     AngleBracketedGenericArguments, Attribute, Error as SynError, FnArg, GenericArgument, Ident,
-    ImplItem, ImplItemFn, ItemImpl, Meta, PatType, Path, PathArguments, Result as SynResult,
-    ReturnType, Signature, Type, TypePath,
+    ImplItem, ImplItemFn, ItemImpl, Meta, Path, PathArguments, Result as SynResult, ReturnType,
+    Signature, Type, TypePath,
 };
 
 use crate::attrs::AttributeData;
@@ -17,8 +17,21 @@ use crate::attrs::AttributeData;
 struct ConstructorData {
     self_type: TypePath,
     identifier: Ident,
-    arguments: Vec<PatType>,
+    arguments: Vec<ArgumentData>,
     return_type: ReturnTypeData,
+}
+
+#[derive(Debug)]
+struct ArgumentData {
+    span: Span,
+    qualifier: QualifierData,
+}
+
+#[derive(Debug)]
+enum QualifierData {
+    None,
+    Named(TokenStream2),
+    Qualified(TokenStream2),
 }
 
 #[derive(Debug)]
@@ -38,11 +51,35 @@ impl AttributeRemovalVisitor {
         }
         false
     }
+
+    fn is_named_attribute(attr: &Attribute) -> bool {
+        if let Meta::List(list) = &attr.meta {
+            let segments = &list.path.segments;
+            if segments.first().is_some_and(|s| s.ident == "named") {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn is_qualified_attribute(attr: &Attribute) -> bool {
+        if let Meta::List(list) = &attr.meta {
+            let segments = &list.path.segments;
+            if segments.first().is_some_and(|s| s.ident == "qualified") {
+                return true;
+            }
+        }
+        false
+    }
 }
 
 impl VisitMut for AttributeRemovalVisitor {
     fn visit_attributes_mut(&mut self, attrs: &mut Vec<Attribute>) {
-        attrs.retain(|attr| !Self::is_inject_attribute(attr));
+        attrs.retain(|attr| {
+            !Self::is_inject_attribute(attr)
+                && !Self::is_named_attribute(attr)
+                && !Self::is_qualified_attribute(attr)
+        });
         attrs
             .iter_mut()
             .for_each(|attr| visit_mut::visit_attribute_mut(self, attr));
@@ -134,7 +171,7 @@ fn is_annotated_with_inject(item_fn: &&ImplItemFn) -> bool {
 
 fn parse_constructor(self_type: TypePath, signature: Signature) -> SynResult<ConstructorData> {
     let identifier = signature.ident;
-    let arguments = parse_constructor_arguments(signature.inputs);
+    let arguments = parse_constructor_arguments(signature.inputs)?;
     let return_type = parse_constructor_return_type(signature.output, &self_type)?;
 
     Ok(ConstructorData {
@@ -145,7 +182,7 @@ fn parse_constructor(self_type: TypePath, signature: Signature) -> SynResult<Con
     })
 }
 
-fn parse_constructor_arguments(inputs: Punctuated<FnArg, Comma>) -> Vec<PatType> {
+fn parse_constructor_arguments(inputs: Punctuated<FnArg, Comma>) -> SynResult<Vec<ArgumentData>> {
     inputs
         .into_iter()
         .map(|arg| {
@@ -155,7 +192,72 @@ fn parse_constructor_arguments(inputs: Punctuated<FnArg, Comma>) -> Vec<PatType>
                 unreachable!("a constructor should not have a receiver argument");
             }
         })
-        .collect::<Vec<_>>()
+        .map(|arg| (arg.span(), arg.attrs))
+        .map(|(span, attrs)| parse_argument_attributes(attrs).map(|attr| (span, attr)))
+        .map(|res| res.map(|(span, qualifier)| ArgumentData { span, qualifier }))
+        .collect()
+}
+
+fn parse_argument_attributes(attrs: Vec<Attribute>) -> SynResult<QualifierData> {
+    let mut res = None;
+
+    for attr in attrs {
+        match attr.meta {
+            Meta::List(list) => {
+                if list.path.segments.first().unwrap().ident == "named" {
+                    if res.is_some() {
+                        return Err(SynError::new(
+                            list.span(),
+                            "only one attribute of `#[named(...)]` or `#[qualified(...)]` is allowed",
+                        ));
+                    }
+                    res = Some(QualifierData::Named(list.tokens));
+                } else if list.path.segments.first().unwrap().ident == "qualified" {
+                    if res.is_some() {
+                        return Err(SynError::new(
+                            list.span(),
+                            "only one attribute of `#[named(...)]` or `#[qualified(...)]` is allowed",
+                        ));
+                    }
+                    res = Some(QualifierData::Qualified(list.tokens));
+                } else {
+                    continue;
+                }
+            }
+            Meta::Path(path) => {
+                if path.segments.first().unwrap().ident == "named" {
+                    return Err(SynError::new(
+                        path.span(),
+                        "expects `#[named(...)]` to receive a `&'static str`",
+                    ));
+                } else if path.segments.first().unwrap().ident == "qualified" {
+                    return Err(SynError::new(
+                        path.span(),
+                        "expects `#[qualified(...)]` to receive a `TypedQualifier` value",
+                    ));
+                } else {
+                    continue;
+                }
+            }
+            Meta::NameValue(nv) => {
+                if nv.path.segments.first().unwrap().ident == "named" {
+                    return Err(SynError::new(
+                        nv.span(),
+                        "expects `#[named(...)]` to receive a `&'static str`",
+                    ));
+                } else if nv.path.segments.first().unwrap().ident == "qualified" {
+                    return Err(SynError::new(
+                        nv.span(),
+                        "expects `#[qualified(...)]` to receive a `TypedQualifier` value",
+                    ));
+                } else {
+                    continue;
+                }
+            }
+        }
+    }
+
+    Ok(res.unwrap_or(QualifierData::None))
 }
 
 fn parse_constructor_return_type(
@@ -274,17 +376,27 @@ fn expand_component_implementation(
     let get_dep_statements = ctor_data
         .arguments
         .iter()
-        .map(|arg| {
-            let dep = arg.pat.as_ref();
-            quote! { let #dep = injector.get(key::of())?; }
+        .enumerate()
+        .map(|(i, arg)| {
+            let dep = Ident::new(&format!("dep{i}"), arg.span);
+            match &arg.qualifier {
+                QualifierData::None => quote! { let #dep = injector.get(iocc::key::of())?; },
+                QualifierData::Named(name) => {
+                    quote! { let #dep = injector.get(iocc::key::named(#name))?; }
+                }
+                QualifierData::Qualified(qualifier) => {
+                    quote! { let #dep = injector.get(iocc::key::qualified(#qualifier))?; }
+                }
+            }
         })
         .collect::<TokenStream2>();
 
     let dep_args = ctor_data
         .arguments
         .iter()
-        .map(|arg| {
-            let dep = arg.pat.as_ref();
+        .enumerate()
+        .map(|(i, arg)| {
+            let dep = Ident::new(&format!("dep{i}"), arg.span);
             quote! { #dep, }
         })
         .collect::<TokenStream2>();
@@ -307,9 +419,12 @@ fn expand_component_implementation(
             #associated_type_constructed
             #associated_type_error
 
-            fn construct<I>(injector: &I) -> Result<Result<Self, Self::Error>, InjectorError>
+            fn construct<I>(injector: &I) -> std::result::Result<
+                std::result::Result<Self, Self::Error>,
+                iocc::container::injector::InjectorError
+            >
             where
-                I: TypedInjector + ?Sized
+                I: iocc::container::injector::TypedInjector + ?Sized
             {
                 #get_dep_statements
                 #wire_deps
