@@ -1,11 +1,11 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{quote, ToTokens};
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
+use syn::token::Comma;
+use syn::visit_mut::{self, VisitMut};
 use syn::{
-    punctuated::Punctuated,
-    spanned::Spanned,
-    token::Comma,
-    visit_mut::{self, VisitMut},
     AngleBracketedGenericArguments, Attribute, Error as SynError, FnArg, GenericArgument, Ident,
     ImplItem, ImplItemFn, ItemImpl, Meta, Path, PathArguments, Result as SynResult, ReturnType,
     Signature, Type, TypePath,
@@ -32,6 +32,8 @@ enum QualifierData {
     None,
     Named(TokenStream2),
     Qualified(TokenStream2),
+    CollectAny,
+    CollectKeyType,
 }
 
 #[derive(Debug)]
@@ -43,30 +45,16 @@ enum ReturnTypeData {
 struct AttributeRemovalVisitor;
 
 impl AttributeRemovalVisitor {
-    fn is_inject_attribute(attr: &Attribute) -> bool {
+    fn is_custom_attribute(attr: &Attribute) -> bool {
         if let Meta::Path(path) = &attr.meta {
             if path.segments.first().is_some_and(|s| s.ident == "inject") {
                 return true;
             }
-        }
-        false
-    }
-
-    fn is_named_attribute(attr: &Attribute) -> bool {
-        if let Meta::List(list) = &attr.meta {
-            let segments = &list.path.segments;
-            if segments.first().is_some_and(|s| s.ident == "named") {
-                return true;
-            }
-        }
-        false
-    }
-
-    fn is_qualified_attribute(attr: &Attribute) -> bool {
-        if let Meta::List(list) = &attr.meta {
-            let segments = &list.path.segments;
-            if segments.first().is_some_and(|s| s.ident == "qualified") {
-                return true;
+        } else if let Meta::List(list) = &attr.meta {
+            if let Some(s) = list.path.segments.first() {
+                if s.ident == "named" || s.ident == "qualified" || s.ident == "collect" {
+                    return true;
+                }
             }
         }
         false
@@ -75,11 +63,7 @@ impl AttributeRemovalVisitor {
 
 impl VisitMut for AttributeRemovalVisitor {
     fn visit_attributes_mut(&mut self, attrs: &mut Vec<Attribute>) {
-        attrs.retain(|attr| {
-            !Self::is_inject_attribute(attr)
-                && !Self::is_named_attribute(attr)
-                && !Self::is_qualified_attribute(attr)
-        });
+        attrs.retain(|attr| !Self::is_custom_attribute(attr));
         attrs
             .iter_mut()
             .for_each(|attr| visit_mut::visit_attribute_mut(self, attr));
@@ -204,39 +188,51 @@ fn parse_argument_attributes(attrs: Vec<Attribute>) -> SynResult<QualifierData> 
     for attr in attrs {
         match attr.meta {
             Meta::List(list) => {
-                if list.path.segments.first().unwrap().ident == "named" {
-                    if res.is_some() {
+                let list_span = list.span();
+                let attr_name = &list.path.segments.first().unwrap().ident;
+
+                let data = if attr_name == "named" {
+                    QualifierData::Named(list.tokens)
+                } else if attr_name == "qualified" {
+                    QualifierData::Qualified(list.tokens)
+                } else if attr_name == "collect" {
+                    let param = list.tokens.to_string();
+                    let param = param.trim();
+
+                    if param == "any" {
+                        QualifierData::CollectAny
+                    } else if param == "key" {
+                        QualifierData::CollectKeyType
+                    } else {
                         return Err(SynError::new(
-                            list.span(),
-                            "only one attribute of `#[named(...)]` or `#[qualified(...)]` is allowed",
+                            list.tokens.span(),
+                            "expects `#[collect(any)]` or `#[collect(key)]`",
                         ));
                     }
-                    res = Some(QualifierData::Named(list.tokens));
-                } else if list.path.segments.first().unwrap().ident == "qualified" {
-                    if res.is_some() {
-                        return Err(SynError::new(
-                            list.span(),
-                            "only one attribute of `#[named(...)]` or `#[qualified(...)]` is allowed",
-                        ));
-                    }
-                    res = Some(QualifierData::Qualified(list.tokens));
                 } else {
                     continue;
+                };
+
+                if res.is_some() {
+                    return Err(SynError::new(
+                        list_span,
+                        "only one attribute of `#[named(...)]`, `#[qualified(...)]` or `#[collect(...)]` is allowed",
+                    ));
                 }
+                res = Some(data);
             }
             Meta::Path(path) => {
-                if path.segments.first().unwrap().ident == "named" {
+                let attr_name = &path.segments.first().unwrap().ident;
+                if attr_name == "named" {
                     return Err(SynError::new(
                         path.span(),
                         "expects `#[named(...)]` to receive a `&'static str`",
                     ));
-                } else if path.segments.first().unwrap().ident == "qualified" {
+                } else if attr_name == "qualified" {
                     return Err(SynError::new(
                         path.span(),
                         "expects `#[qualified(...)]` to receive a `TypedQualifier` value",
                     ));
-                } else {
-                    continue;
                 }
             }
             Meta::NameValue(nv) => {
@@ -250,8 +246,6 @@ fn parse_argument_attributes(attrs: Vec<Attribute>) -> SynResult<QualifierData> 
                         nv.span(),
                         "expects `#[qualified(...)]` to receive a `TypedQualifier` value",
                     ));
-                } else {
-                    continue;
                 }
             }
         }
@@ -386,6 +380,12 @@ fn expand_component_implementation(
                 }
                 QualifierData::Qualified(qualifier) => {
                     quote! { let #dep = injector.get(iocc::key::qualified(#qualifier))?; }
+                }
+                QualifierData::CollectAny => {
+                    quote! { let #dep = injector.collect(iocc::key::AnyPattern::new())?; }
+                }
+                QualifierData::CollectKeyType => {
+                    quote! { let #dep = injector.collect(iocc::key::KeyTypePattern::new())?; }
                 }
             }
         })
