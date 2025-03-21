@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Minimal dependency injection framework"
+description = "Concurrent and type-safe dependency injection framework written in Rust inspired by Spring and Guice"
 
 [dependencies]
 oneshot.workspace = true
