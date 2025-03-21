@@ -10,7 +10,6 @@ env:
 jobs:
   check:
     runs-on: ubuntu-latest
-    needs: setup
 
     steps:
       - name: Checkout Repository
