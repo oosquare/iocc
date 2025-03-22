@@ -4,19 +4,20 @@ use std::sync::Arc;
 
 use crate::container::injector::{InjectorError, TypedInjector};
 use crate::container::SharedManaged;
-use crate::provider::component::RawComponent;
-use crate::provider::{CallContext, TypedProvider, TypedSharedProvider};
+use crate::provider::component::Component;
+use crate::provider::{TypedProvider, TypedSharedProvider};
+use crate::provider::context::CallContext;
 
-pub struct RawComponentProvider<C>
+pub struct ComponentProvider<C>
 where
-    C: RawComponent,
+    C: Component,
 {
     _marker: PhantomData<C>,
 }
 
-impl<C> RawComponentProvider<C>
+impl<C> ComponentProvider<C>
 where
-    C: RawComponent,
+    C: Component,
 {
     pub fn new() -> Self {
         Self {
@@ -25,21 +26,21 @@ where
     }
 }
 
-impl<C> Debug for RawComponentProvider<C>
+impl<C> Debug for ComponentProvider<C>
 where
-    C: RawComponent,
+    C: Component,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.debug_struct("RawComponentProvider<C>")
+        f.debug_struct("ComponentProvider<C>")
             .finish_non_exhaustive()
     }
 }
 
-impl<C> TypedProvider for RawComponentProvider<C>
+impl<C> TypedProvider for ComponentProvider<C>
 where
-    C: RawComponent,
+    C: Component,
 {
-    type Output = C::RawConstructed;
+    type Output = C::Constructed;
 
     fn provide<I>(
         &self,
@@ -50,7 +51,7 @@ where
         I: TypedInjector + ?Sized,
     {
         match C::construct(injector) {
-            Ok(Ok(obj)) => Ok(obj.raw_post_process()),
+            Ok(Ok(obj)) => Ok(obj.post_process()),
             Ok(Err(err)) => Err(InjectorError::ObjectConstruction {
                 key: context.key().dyn_clone(),
                 source: Arc::from(err.into()),
@@ -60,10 +61,7 @@ where
     }
 }
 
-impl<C> TypedSharedProvider for RawComponentProvider<C> where
-    C: RawComponent<RawConstructed: SharedManaged>
-{
-}
+impl<C> TypedSharedProvider for ComponentProvider<C> where C: Component<Constructed: SharedManaged> {}
 
 #[cfg(test)]
 mod tests {
@@ -82,19 +80,19 @@ mod tests {
 
     impl Abstract for Impl {}
 
-    impl RawComponent for Impl {
-        type RawConstructed = Arc<dyn Abstract>;
+    impl Component for Impl {
+        type Constructed = Arc<dyn Abstract>;
 
-        type RawError = Infallible;
+        type Error = Infallible;
 
-        fn construct<I>(_injector: &I) -> Result<Result<Self, Self::RawError>, InjectorError>
+        fn construct<I>(_injector: &I) -> Result<Result<Self, Self::Error>, InjectorError>
         where
             I: TypedInjector + ?Sized,
         {
             Ok(Ok(Impl))
         }
 
-        fn raw_post_process(self) -> Self::RawConstructed {
+        fn post_process(self) -> Self::Constructed {
             Arc::new(self)
         }
     }
@@ -102,7 +100,7 @@ mod tests {
     #[test]
     fn component_provider_succeeds() {
         let injector = MockInjector::new();
-        let provider = RawComponentProvider::<Impl>::new();
+        let provider = ComponentProvider::<Impl>::new();
         assert!(provider
             .provide(
                 &injector,

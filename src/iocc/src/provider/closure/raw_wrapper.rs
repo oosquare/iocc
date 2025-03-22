@@ -4,7 +4,8 @@ use std::sync::Arc;
 use crate::container::injector::{InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
 use crate::provider::closure::RawClosure;
-use crate::provider::{CallContext, TypedProvider, TypedSharedProvider};
+use crate::provider::{TypedProvider, TypedSharedProvider};
+use crate::provider::context::CallContext;
 
 pub struct RawClosureProvider<T, C>
 where

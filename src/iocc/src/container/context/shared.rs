@@ -11,7 +11,8 @@ use crate::container::injector::{Injector, InjectorError};
 use crate::container::registry::{ProviderEntry, ProviderMap};
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::{CallContext, SharedProvider};
+use crate::provider::SharedProvider;
+use crate::provider::context::CallContext;
 use crate::scope::Scope;
 
 pub struct SharedContext<S: Scope> {

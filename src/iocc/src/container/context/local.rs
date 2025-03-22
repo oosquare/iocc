@@ -9,7 +9,8 @@ use crate::container::injector::{Injector, InjectorError};
 use crate::container::registry::ProviderEntry;
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::{CallContext, Provider};
+use crate::provider::Provider;
+use crate::provider::context::CallContext;
 use crate::scope::Scope;
 
 pub struct LocalContext<S: Scope> {

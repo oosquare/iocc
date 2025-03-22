@@ -9,6 +9,7 @@ use snafu::prelude::*;
 
 use crate::container::Managed;
 use crate::key::{Key, Pattern, TypedKey};
+use crate::provider::context::CallContext;
 use crate::util::any::Downcast;
 
 pub use collect::Collect;

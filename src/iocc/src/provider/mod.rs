@@ -1,12 +1,14 @@
 pub mod closure;
 pub mod component;
+pub mod context;
 pub mod instance;
 
 use std::fmt::Debug;
 
 use crate::container::injector::{Injector, InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
-use crate::key::Key;
+
+use context::CallContext;
 
 pub trait Provider: Debug + Send + Sync + 'static {
     fn dyn_provide(
@@ -61,20 +63,5 @@ impl<T: TypedSharedProvider> SharedProvider for T {
     ) -> Result<Box<dyn SharedManaged>, InjectorError> {
         self.provide(injector, context)
             .map(|obj| -> Box<dyn SharedManaged> { Box::new(obj) })
-    }
-}
-
-#[derive(Clone)]
-pub struct CallContext<'a> {
-    key: &'a dyn Key,
-}
-
-impl<'a> CallContext<'a> {
-    pub fn new(key: &'a dyn Key) -> Self {
-        Self { key }
-    }
-
-    pub fn key(&self) -> &dyn Key {
-        self.key
     }
 }

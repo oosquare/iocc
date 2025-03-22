@@ -7,6 +7,7 @@ use crate::container::registry::{ConfigurerImpl, ProviderMap, Registry, Registry
 use crate::container::Managed;
 use crate::key::Key;
 use crate::module::Module;
+use crate::provider::context::CallContext;
 use crate::scope::Scope;
 
 pub struct Container<S: Scope> {
