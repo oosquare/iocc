@@ -2,8 +2,8 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 
 use crate::container::injector::{InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
-use crate::provider::{TypedProvider, TypedSharedProvider};
 use crate::provider::context::CallContext;
+use crate::provider::{TypedProvider, TypedSharedProvider};
 
 pub struct InstanceProvider<T>
 where

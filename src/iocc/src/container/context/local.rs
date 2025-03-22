@@ -9,8 +9,8 @@ use crate::container::injector::{Injector, InjectorError};
 use crate::container::registry::ProviderEntry;
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::Provider;
 use crate::provider::context::CallContext;
+use crate::provider::Provider;
 use crate::scope::Scope;
 
 pub struct LocalContext<S: Scope> {
@@ -85,6 +85,14 @@ impl<S: Scope> LocalContext<S> {
 
 impl<S: Scope> Injector for LocalContext<S> {
     fn dyn_get(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
+        self.get_object(key)
+    }
+
+    fn dyn_get_dependency<'a>(
+        &self,
+        key: &dyn Key,
+        _context: &'a CallContext<'a>,
+    ) -> Result<Box<dyn Managed>, InjectorError> {
         self.get_object(key)
     }
 

@@ -1,11 +1,11 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::sync::Arc;
 
-use crate::container::injector::{InjectorError, TypedInjector};
+use crate::container::injector::{ContextForwardingInjectorProxy, InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
 use crate::provider::closure::RawClosure;
-use crate::provider::{TypedProvider, TypedSharedProvider};
 use crate::provider::context::CallContext;
+use crate::provider::{TypedProvider, TypedSharedProvider};
 
 pub struct RawClosureProvider<T, C>
 where
@@ -51,7 +51,8 @@ where
     where
         I: TypedInjector + ?Sized,
     {
-        match (self.closure)(injector.upcast_dyn()) {
+        let injector = ContextForwardingInjectorProxy::new(injector, context);
+        match (self.closure)(&injector) {
             Ok(Ok(obj)) => Ok(obj),
             Ok(Err(err)) => Err(InjectorError::ObjectConstruction {
                 key: context.key().dyn_clone(),

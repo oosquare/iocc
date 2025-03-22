@@ -60,6 +60,14 @@ impl<S: Scope> Injector for Container<S> {
         self.context.dyn_get(key)
     }
 
+    fn dyn_get_dependency<'a>(
+        &self,
+        key: &dyn Key,
+        context: &'a CallContext<'a>,
+    ) -> Result<Box<dyn Managed>, InjectorError> {
+        self.context.dyn_get_dependency(key, context)
+    }
+
     fn keys(&self, type_id: TypeId) -> Vec<Box<dyn Key>> {
         self.context.shared_ref().keys(type_id)
     }

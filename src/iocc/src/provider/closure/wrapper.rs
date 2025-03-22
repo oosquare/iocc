@@ -2,11 +2,12 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+use crate::container::injector::ContextForwardingInjectorProxy;
 use crate::container::{Managed, SharedManaged};
 use crate::prelude::{InjectorError, TypedInjector};
 use crate::provider::closure::Closure;
-use crate::provider::{TypedProvider, TypedSharedProvider};
 use crate::provider::context::CallContext;
+use crate::provider::{TypedProvider, TypedSharedProvider};
 
 pub struct ClosureProvider<T, C, D>
 where
@@ -60,7 +61,8 @@ where
     where
         I: TypedInjector + ?Sized,
     {
-        match self.closure.run(injector.upcast_dyn()) {
+        let injector = ContextForwardingInjectorProxy::new(injector, context);
+        match self.closure.run(&injector) {
             Ok(Ok(obj)) => Ok(obj),
             Ok(Err(err)) => Err(InjectorError::ObjectConstruction {
                 key: context.key().dyn_clone(),
@@ -91,7 +93,9 @@ mod tests {
     #[test]
     fn closure_provider_succeeds() {
         let mut injector = MockInjector::new();
-        injector.expect_dyn_get().returning(|_| Ok(Box::new(42i32)));
+        injector
+            .expect_dyn_get_dependency()
+            .returning(|_, _| Ok(Box::new(42i32)));
 
         let provider = ClosureProvider::new(|v: i32| Ok::<_, Infallible>(v));
 

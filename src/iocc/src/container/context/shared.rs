@@ -11,8 +11,8 @@ use crate::container::injector::{Injector, InjectorError};
 use crate::container::registry::{ProviderEntry, ProviderMap};
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::SharedProvider;
 use crate::provider::context::CallContext;
+use crate::provider::SharedProvider;
 use crate::scope::Scope;
 
 pub struct SharedContext<S: Scope> {
@@ -53,7 +53,8 @@ impl<S: Scope> SharedContext<S> {
         self.providers.as_ref()
     }
 
-    fn get_object(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
+    fn get_object(&self, context: &CallContext) -> Result<Box<dyn Managed>, InjectorError> {
+        let key = context.key();
         if let Some(object) = self.try_get_constructed_object(key) {
             return Ok(object);
         }
@@ -65,7 +66,7 @@ impl<S: Scope> SharedContext<S> {
                 if self.should_forward_request_to_parent(*scope) {
                     self.get_object_from_parent(key)
                 } else if *scope == self.scope {
-                    self.get_object_from_current_context(provider.as_ref(), key)
+                    self.get_object_from_self(provider.as_ref(), context)
                 } else {
                     Err(InjectorError::ShortLifetime {
                         key: key.dyn_clone(),
@@ -114,11 +115,12 @@ impl<S: Scope> SharedContext<S> {
         }
     }
 
-    fn get_object_from_current_context(
+    fn get_object_from_self(
         &self,
         provider: &dyn SharedProvider,
-        key: &dyn Key,
+        context: &CallContext,
     ) -> Result<Box<dyn Managed>, InjectorError> {
+        let key = context.key();
         let mut managed = self.managed.write();
 
         if let Some(context) = managed.constructing.get_mut(key) {
@@ -128,7 +130,7 @@ impl<S: Scope> SharedContext<S> {
                 self.wait_for_constructed_object(managed, key)
             }
         } else {
-            self.construct_object(managed, provider, key)
+            self.construct_object(managed, provider, context)
         }
     }
 
@@ -189,15 +191,15 @@ impl<S: Scope> SharedContext<S> {
         &self,
         mut managed: RwLockWriteGuard<SharedManagedObjectData>,
         provider: &dyn SharedProvider,
-        key: &dyn Key,
+        context: &CallContext,
     ) -> Result<Box<dyn Managed>, InjectorError> {
+        let key = context.key();
         let on_thread = thread::current().id();
         let object_context = ConstructingObjectContext::new(on_thread);
         managed.constructing.insert(key.dyn_clone(), object_context);
         drop(managed);
 
-        let context = CallContext::new(key);
-        match provider.dyn_provide_shared(self, &context) {
+        match provider.dyn_provide_shared(self, context) {
             Ok(object) => {
                 let mut managed = self.managed.write();
                 managed.objects.insert(key.dyn_clone(), object.dyn_clone());
@@ -227,7 +229,15 @@ impl<S: Scope> SharedContext<S> {
 
 impl<S: Scope> Injector for SharedContext<S> {
     fn dyn_get(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
-        self.get_object(key)
+        self.get_object(&CallContext::new(key))
+    }
+
+    fn dyn_get_dependency<'a>(
+        &self,
+        key: &dyn Key,
+        _context: &'a CallContext<'a>,
+    ) -> Result<Box<dyn Managed>, InjectorError> {
+        self.get_object(&CallContext::new(key))
     }
 
     fn keys(&self, type_id: TypeId) -> Vec<Box<dyn Key>> {

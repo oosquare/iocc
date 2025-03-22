@@ -2,11 +2,11 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::container::injector::{InjectorError, TypedInjector};
+use crate::container::injector::{ContextForwardingInjectorProxy, InjectorError, TypedInjector};
 use crate::container::SharedManaged;
 use crate::provider::component::Component;
-use crate::provider::{TypedProvider, TypedSharedProvider};
 use crate::provider::context::CallContext;
+use crate::provider::{TypedProvider, TypedSharedProvider};
 
 pub struct ComponentProvider<C>
 where
@@ -50,7 +50,8 @@ where
     where
         I: TypedInjector + ?Sized,
     {
-        match C::construct(injector) {
+        let injector = ContextForwardingInjectorProxy::new(injector, context);
+        match C::construct(&injector) {
             Ok(Ok(obj)) => Ok(obj.post_process()),
             Ok(Err(err)) => Err(InjectorError::ObjectConstruction {
                 key: context.key().dyn_clone(),

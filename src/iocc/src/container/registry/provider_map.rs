@@ -158,8 +158,8 @@ mod tests {
 
     use crate::container::injector::{InjectorError, TypedInjector};
     use crate::key;
-    use crate::provider::{TypedProvider, TypedSharedProvider};
     use crate::provider::context::CallContext;
+    use crate::provider::{TypedProvider, TypedSharedProvider};
     use crate::scope::SingletonScope;
 
     use super::*;

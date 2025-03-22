@@ -1,5 +1,6 @@
 mod collect;
 mod object_map;
+mod proxy;
 
 use std::any::TypeId;
 use std::error::Error;
@@ -14,10 +15,17 @@ use crate::util::any::Downcast;
 
 pub use collect::Collect;
 pub(super) use object_map::ObjectMap;
+pub(crate) use proxy::ContextForwardingInjectorProxy;
 
 #[cfg_attr(test, mockall::automock)]
-pub trait Injector: Send + Sync + 'static {
+pub trait Injector: Send + Sync {
     fn dyn_get(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError>;
+
+    fn dyn_get_dependency<'a>(
+        &self,
+        key: &dyn Key,
+        context: &'a CallContext<'a>,
+    ) -> Result<Box<dyn Managed>, InjectorError>;
 
     fn keys(&self, type_id: TypeId) -> Vec<Box<dyn Key>>;
 }
@@ -57,7 +65,7 @@ where
     }
 }
 
-impl TypedInjector for dyn Injector {
+impl TypedInjector for dyn Injector + '_ {
     fn upcast_dyn(&self) -> &dyn Injector {
         self
     }
