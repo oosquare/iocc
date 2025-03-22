@@ -1,4 +1,5 @@
 mod collect;
+mod context;
 mod object_map;
 mod proxy;
 
@@ -10,10 +11,10 @@ use snafu::prelude::*;
 
 use crate::container::Managed;
 use crate::key::{Key, Pattern, TypedKey};
-use crate::provider::context::CallContext;
 use crate::util::any::Downcast;
 
 pub use collect::Collect;
+pub use context::CallContext;
 pub(super) use object_map::ObjectMap;
 pub(crate) use proxy::ContextForwardingInjectorProxy;
 

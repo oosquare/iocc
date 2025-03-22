@@ -2,12 +2,11 @@ use std::any::TypeId;
 use std::sync::Arc;
 
 use crate::container::context::{LocalContext, SharedContext};
-use crate::container::injector::{Injector, InjectorError};
+use crate::container::injector::{CallContext, Injector, InjectorError};
 use crate::container::registry::{ConfigurerImpl, ProviderMap, Registry, RegistryError};
 use crate::container::Managed;
 use crate::key::Key;
 use crate::module::Module;
-use crate::provider::context::CallContext;
 use crate::scope::Scope;
 
 pub struct Container<S: Scope> {

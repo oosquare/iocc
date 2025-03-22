@@ -5,11 +5,10 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 use crate::container::context::SharedContext;
-use crate::container::injector::{Injector, InjectorError};
+use crate::container::injector::{CallContext, Injector, InjectorError};
 use crate::container::registry::ProviderEntry;
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::context::CallContext;
 use crate::provider::Provider;
 use crate::scope::Scope;
 

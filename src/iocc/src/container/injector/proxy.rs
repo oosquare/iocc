@@ -1,9 +1,8 @@
 use std::any::TypeId;
 
-use crate::container::injector::{Injector, InjectorError, TypedInjector};
+use crate::container::injector::{CallContext, Injector, InjectorError, TypedInjector};
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::context::CallContext;
 
 pub struct ContextForwardingInjectorProxy<'a, I>
 where

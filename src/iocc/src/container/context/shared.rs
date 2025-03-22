@@ -6,12 +6,10 @@ use std::thread::{self, ThreadId};
 use oneshot::{Receiver, Sender};
 use parking_lot::{RwLock, RwLockWriteGuard};
 
-use crate::container::injector::ObjectMap;
-use crate::container::injector::{Injector, InjectorError};
+use crate::container::injector::{CallContext, Injector, InjectorError, ObjectMap};
 use crate::container::registry::{ProviderEntry, ProviderMap};
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::context::CallContext;
 use crate::provider::SharedProvider;
 use crate::scope::Scope;
 

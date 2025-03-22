@@ -1,10 +1,11 @@
 use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::sync::Arc;
 
-use crate::container::injector::{ContextForwardingInjectorProxy, InjectorError, TypedInjector};
+use crate::container::injector::{
+    CallContext, ContextForwardingInjectorProxy, InjectorError, TypedInjector,
+};
 use crate::container::{Managed, SharedManaged};
 use crate::provider::closure::RawClosure;
-use crate::provider::context::CallContext;
 use crate::provider::{TypedProvider, TypedSharedProvider};
 
 pub struct RawClosureProvider<T, C>

@@ -75,9 +75,8 @@ impl<S: Scope> ConfigurerPrivate for ConfigurerImpl<S> {
 mod tests {
     use std::{fmt::Debug, sync::Arc};
 
-    use crate::container::injector::{InjectorError, TypedInjector};
+    use crate::container::injector::{CallContext, InjectorError, TypedInjector};
     use crate::key;
-    use crate::provider::context::CallContext;
     use crate::provider::{TypedProvider, TypedSharedProvider};
     use crate::scope::SingletonScope;
 

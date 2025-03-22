@@ -2,10 +2,11 @@ use std::fmt::{Debug, Formatter, Result as FmtResult};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::container::injector::{ContextForwardingInjectorProxy, InjectorError, TypedInjector};
+use crate::container::injector::{
+    CallContext, ContextForwardingInjectorProxy, InjectorError, TypedInjector,
+};
 use crate::container::SharedManaged;
 use crate::provider::component::Component;
-use crate::provider::context::CallContext;
 use crate::provider::{TypedProvider, TypedSharedProvider};
 
 pub struct ComponentProvider<C>

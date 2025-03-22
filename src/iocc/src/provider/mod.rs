@@ -1,14 +1,11 @@
 pub mod closure;
 pub mod component;
-pub mod context;
 pub mod instance;
 
 use std::fmt::Debug;
 
-use crate::container::injector::{Injector, InjectorError, TypedInjector};
+use crate::container::injector::{CallContext, Injector, InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
-
-use context::CallContext;
 
 pub trait Provider: Debug + Send + Sync + 'static {
     fn dyn_provide(
