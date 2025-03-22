@@ -227,15 +227,17 @@ impl<S: Scope> SharedContext<S> {
 
 impl<S: Scope> Injector for SharedContext<S> {
     fn dyn_get(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
-        self.get_object(&CallContext::new(key))
+        let context = CallContext::new(key);
+        self.get_object(&context)
     }
 
     fn dyn_get_dependency<'a>(
         &self,
         key: &dyn Key,
-        _context: &'a CallContext<'a>,
+        context: &'a CallContext<'a>,
     ) -> Result<Box<dyn Managed>, InjectorError> {
-        self.get_object(&CallContext::new(key))
+        let context = context.append(key);
+        self.get_object(&context)
     }
 
     fn keys(&self, type_id: TypeId) -> Vec<Box<dyn Key>> {
