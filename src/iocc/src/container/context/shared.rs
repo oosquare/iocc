@@ -10,7 +10,7 @@ use crate::container::injector::{CallContext, Injector, InjectorError, ObjectMap
 use crate::container::registry::{ProviderEntry, ProviderMap};
 use crate::container::Managed;
 use crate::key::Key;
-use crate::provider::SharedProvider;
+use crate::provider::{Provider, SharedProvider};
 use crate::scope::Scope;
 
 pub struct SharedContext<S: Scope> {
@@ -58,26 +58,20 @@ impl<S: Scope> SharedContext<S> {
         }
 
         match self.try_get_provider_by_key(key)? {
-            p @ ProviderEntry::Shared {
+            ProviderEntry::Shared {
                 provider, scope, ..
             } => {
                 if self.should_forward_request_to_parent(*scope) {
-                    self.get_object_from_parent(key)
+                    self.get_object_from_parent(context)
                 } else if *scope == self.scope {
-                    self.get_object_from_self(provider.as_ref(), context)
+                    self.get_shared_object_from_self(provider.as_ref(), context)
                 } else {
-                    Err(InjectorError::ShortLifetime {
-                        key: key.dyn_clone(),
-                        lifetime: p.lifetime().to_str(),
-                        scope: self.scope.to_str(),
-                    })
+                    self.get_unbounded_object_from_self(provider.upcast_provider(), context)
                 }
             }
-            p @ ProviderEntry::Owned { .. } => Err(InjectorError::ShortLifetime {
-                key: key.dyn_clone(),
-                lifetime: p.lifetime().to_str(),
-                scope: self.scope.to_str(),
-            }),
+            ProviderEntry::Owned { provider, .. } => {
+                self.get_unbounded_object_from_self(provider.as_ref(), context)
+            }
         }
     }
 
@@ -101,9 +95,12 @@ impl<S: Scope> SharedContext<S> {
         object_scope.outlive(self.scope) && object_scope != self.scope
     }
 
-    fn get_object_from_parent(&self, key: &dyn Key) -> Result<Box<dyn Managed>, InjectorError> {
+    fn get_object_from_parent(
+        &self,
+        context: &CallContext,
+    ) -> Result<Box<dyn Managed>, InjectorError> {
         if let Some(parent) = self.parent.as_ref() {
-            parent.dyn_get(key)
+            parent.get_object(context)
         } else {
             // If the parent context doesn't exist, `self` must be a root
             // context whose scope is `S::SINGLETON`, and no other scope
@@ -113,7 +110,7 @@ impl<S: Scope> SharedContext<S> {
         }
     }
 
-    fn get_object_from_self(
+    fn get_shared_object_from_self(
         &self,
         provider: &dyn SharedProvider,
         context: &CallContext,
@@ -128,7 +125,7 @@ impl<S: Scope> SharedContext<S> {
                 self.wait_for_constructed_object(managed, key)
             }
         } else {
-            self.construct_object(managed, provider, context)
+            self.construct_shared_object(managed, provider, context)
         }
     }
 
@@ -185,7 +182,7 @@ impl<S: Scope> SharedContext<S> {
         }
     }
 
-    fn construct_object(
+    fn construct_shared_object(
         &self,
         mut managed: RwLockWriteGuard<SharedManagedObjectData>,
         provider: &dyn SharedProvider,
@@ -221,6 +218,21 @@ impl<S: Scope> SharedContext<S> {
         if let Some(context) = managed.constructing.remove(key) {
             drop(managed);
             context.notify(response);
+        }
+    }
+
+    fn get_unbounded_object_from_self(
+        &self,
+        provider: &dyn Provider,
+        context: &CallContext,
+    ) -> Result<Box<dyn Managed>, InjectorError> {
+        let key = context.key();
+        if context.trace().previous_exist_key(key) {
+            Err(InjectorError::CyclicDependency {
+                key: key.dyn_clone(),
+            })
+        } else {
+            provider.dyn_provide(self, context)
         }
     }
 }
@@ -337,16 +349,30 @@ mod tests {
         }
     }
 
-    struct RecursiveObject {
-        _recursive: Arc<RecursiveObject>,
+    struct SingletonRecursiveObject {
+        _recursive: TransientRecursiveObject,
     }
 
-    impl RecursiveObject {
+    impl SingletonRecursiveObject {
         fn get_provider() -> Box<dyn SharedProvider> {
             Box::new(RawClosureProvider::new(move |injector| {
-                Ok(Ok::<_, Infallible>(Arc::new(RecursiveObject {
+                Ok(Ok::<_, Infallible>(Arc::new(Self {
                     _recursive: injector.get(key::of())?,
                 })))
+            }))
+        }
+    }
+
+    struct TransientRecursiveObject {
+        _recursive: Arc<SingletonRecursiveObject>,
+    }
+
+    impl TransientRecursiveObject {
+        fn get_provider() -> Box<dyn Provider> {
+            Box::new(RawClosureProvider::new(move |injector| {
+                Ok(Ok::<_, Infallible>(Self {
+                    _recursive: injector.get(key::of())?,
+                }))
             }))
         }
     }
@@ -433,7 +459,7 @@ mod tests {
     }
 
     #[test]
-    fn shared_context_get_fails_when_object_lifetime_is_within_scope() {
+    fn shared_context_get_succeeds_when_object_lifetime_is_within_scope() {
         let mut providers = ProviderMap::new();
         providers.insert_shared(
             Box::new(key::qualified::<Arc<TestObject>, u32>(0)),
@@ -447,29 +473,29 @@ mod tests {
 
         let context = SharedContext::new_root(Arc::new(providers));
 
-        assert!(matches!(
-            context.get(key::qualified::<Arc<TestObject>, u32>(0)),
-            Err(InjectorError::ShortLifetime { .. })
-        ));
-        assert!(matches!(
-            context.get(key::of::<i32>()),
-            Err(InjectorError::ShortLifetime { .. })
-        ));
+        assert!(context
+            .get(key::qualified::<Arc<TestObject>, u32>(0))
+            .is_ok());
+        assert!(context.get(key::of::<i32>()).is_ok());
     }
 
     #[test]
     fn shared_context_get_fails_when_there_exists_cyclic_dependency() {
         let mut providers = ProviderMap::new();
         providers.insert_shared(
-            Box::new(key::of::<Arc<RecursiveObject>>()),
-            RecursiveObject::get_provider(),
+            Box::new(key::of::<Arc<SingletonRecursiveObject>>()),
+            SingletonRecursiveObject::get_provider(),
             WebScope::Singleton,
+        );
+        providers.insert(
+            Box::new(key::of::<TransientRecursiveObject>()),
+            TransientRecursiveObject::get_provider(),
         );
 
         let context = SharedContext::new_root(Arc::new(providers));
 
         assert!(matches!(
-            context.get(key::of::<Arc<RecursiveObject>>()),
+            context.get(key::of::<Arc<SingletonRecursiveObject>>()),
             Err(InjectorError::CyclicDependency { .. })
         ));
     }

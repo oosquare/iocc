@@ -44,6 +44,8 @@ pub trait SharedProvider: Provider {
         injector: &dyn Injector,
         context: &CallContext<'_>,
     ) -> Result<Box<dyn SharedManaged>, InjectorError>;
+
+    fn upcast_provider(&self) -> &dyn Provider;
 }
 
 pub trait TypedSharedProvider
@@ -60,5 +62,9 @@ impl<T: TypedSharedProvider> SharedProvider for T {
     ) -> Result<Box<dyn SharedManaged>, InjectorError> {
         self.provide(injector, context)
             .map(|obj| -> Box<dyn SharedManaged> { Box::new(obj) })
+    }
+
+    fn upcast_provider(&self) -> &dyn Provider {
+        self
     }
 }

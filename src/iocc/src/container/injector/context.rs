@@ -55,4 +55,15 @@ impl<'a> InjectionTrace<'a> {
     pub fn previous(&self) -> Option<&InjectionTrace<'a>> {
         self.previous
     }
+
+    pub fn previous_exist_key(&self, key: &dyn Key) -> bool {
+        let mut this = self;
+        while let Some(previous) = this.previous() {
+            if previous.key() == key {
+                return true;
+            }
+            this = previous;
+        }
+        false
+    }
 }

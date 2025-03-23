@@ -4,7 +4,7 @@ use std::mem;
 
 use crate::key::Key;
 use crate::provider::{Provider, SharedProvider};
-use crate::scope::{Lifetime, Scope};
+use crate::scope::Scope;
 
 #[derive(Debug)]
 pub struct ProviderMap<S: Scope> {
@@ -140,13 +140,6 @@ impl<S: Scope> ProviderEntry<S> {
         match self {
             Self::Shared { key, .. } => key.as_ref(),
             Self::Owned { key, .. } => key.as_ref(),
-        }
-    }
-
-    pub fn lifetime(&self) -> Lifetime<S> {
-        match self {
-            Self::Shared { scope, .. } => Lifetime::scoped(*scope),
-            Self::Owned { .. } => Lifetime::transient(),
         }
     }
 }
