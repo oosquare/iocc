@@ -1,14 +1,14 @@
 pub mod injector;
 pub mod registry;
 
-mod context;
 mod core;
+mod handle;
 
 use std::sync::Arc;
 
 use crate::util::any::AsAny;
 
-pub use core::Container;
+pub use handle::Container;
 
 pub trait Managed: AsAny + Send + Sync + 'static {}
 
