@@ -87,13 +87,6 @@ pub enum InjectorError {
     #[snafu(display("could not construct the object {key} which depends on itself somehow"))]
     #[non_exhaustive]
     CyclicDependency { key: Box<dyn Key> },
-    #[snafu(display("could not build a object {key} of {lifetime} lifetime in a {scope} scope"))]
-    #[non_exhaustive]
-    ShortLifetime {
-        key: Box<dyn Key>,
-        lifetime: &'static str,
-        scope: &'static str,
-    },
     #[snafu(display("could not construct the object {key}"))]
     #[non_exhaustive]
     ObjectConstruction {
@@ -117,15 +110,6 @@ impl Clone for InjectorError {
             },
             Self::CyclicDependency { key } => Self::CyclicDependency {
                 key: key.dyn_clone(),
-            },
-            Self::ShortLifetime {
-                key,
-                lifetime,
-                scope,
-            } => Self::ShortLifetime {
-                key: key.dyn_clone(),
-                lifetime,
-                scope,
             },
             Self::ObjectConstruction { key, source } => Self::ObjectConstruction {
                 key: key.dyn_clone(),
