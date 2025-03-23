@@ -2,6 +2,7 @@ mod configurer;
 mod provider_map;
 
 use std::error::Error;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use snafu::prelude::*;
 
@@ -17,7 +18,7 @@ pub(super) use provider_map::{ProviderEntry, ProviderMap};
 pub trait Registry: Sized + Send + Sync + 'static {
     type Scope: Scope;
 
-    fn init<M>(module: M) -> Result<Self, Vec<RegistryError>>
+    fn init<M>(module: M) -> Result<Self, RegistryError>
     where
         M: Module<Scope = Self::Scope>;
 }
@@ -77,4 +78,25 @@ pub enum RegistryError {
         module: &'static str,
         source: Box<dyn Error + Send + Sync>,
     },
+    #[snafu(display("aggregated registry errors:\n{}", AggregatedDisplayer::new(errors)))]
+    Aggregated { errors: Vec<RegistryError> },
+}
+
+struct AggregatedDisplayer<'a> {
+    errors: &'a [RegistryError],
+}
+
+impl<'a> AggregatedDisplayer<'a> {
+    fn new(errors: &'a [RegistryError]) -> Self {
+        Self { errors }
+    }
+}
+
+impl Display for AggregatedDisplayer<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        for (i, error) in self.errors.iter().enumerate() {
+            writeln!(f, "{:4}: {}", i + 1, error)?;
+        }
+        Ok(())
+    }
 }

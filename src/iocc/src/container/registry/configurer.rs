@@ -19,11 +19,15 @@ impl<S: Scope> ConfigurerImpl<S> {
         }
     }
 
-    pub fn finish(self) -> Result<ProviderMap<S>, Vec<RegistryError>> {
-        if self.errors.is_empty() {
-            Ok(self.providers)
+    pub fn finish(mut self) -> Result<ProviderMap<S>, RegistryError> {
+        if self.errors.len() > 1 {
+            Err(RegistryError::Aggregated {
+                errors: self.errors,
+            })
+        } else if let Some(error) = self.errors.pop() {
+            Err(error)
         } else {
-            Err(self.errors)
+            Ok(self.providers)
         }
     }
 }
@@ -113,10 +117,7 @@ mod tests {
         );
 
         let errs = configurer.finish().unwrap_err();
-        assert!(matches!(
-            errs.first().unwrap(),
-            RegistryError::KeyDuplicated { .. }
-        ));
+        assert!(matches!(errs, RegistryError::KeyDuplicated { .. }));
     }
 
     #[test]
@@ -134,10 +135,7 @@ mod tests {
         configurer.report_module_error("test", "whatever".into());
 
         let errs = configurer.finish().unwrap_err();
-        assert!(matches!(
-            errs.first().unwrap(),
-            RegistryError::ModuleInner { .. }
-        ));
+        assert!(matches!(errs, RegistryError::ModuleInner { .. }));
     }
 
     #[derive(Debug)]

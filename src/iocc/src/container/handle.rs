@@ -21,13 +21,9 @@ impl<S: Scope> Container<S> {
     }
 
     pub fn sub_container(&self) -> Option<Self> {
-        if let Some(core) = ContainerCore::new_sub(Arc::clone(&self.core)) {
-            Some(Self {
-                core: Arc::new(core),
-            })
-        } else {
-            None
-        }
+        ContainerCore::new_sub(Arc::clone(&self.core)).map(|core| Self {
+            core: Arc::new(core),
+        })
     }
 
     pub fn current_scope(&self) -> S {
@@ -38,7 +34,7 @@ impl<S: Scope> Container<S> {
 impl<S: Scope> Registry for Container<S> {
     type Scope = S;
 
-    fn init<M>(module: M) -> Result<Self, Vec<RegistryError>>
+    fn init<M>(module: M) -> Result<Self, RegistryError>
     where
         M: Module<Scope = Self::Scope>,
     {

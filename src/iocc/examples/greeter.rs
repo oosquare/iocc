@@ -5,10 +5,11 @@ use std::sync::Arc;
 use iocc::prelude::*;
 use iocc::scope::SingletonScope;
 
-fn main() {
-    let container = Container::init(AppModule::new("greeter")).unwrap();
-    let app = container.get(key::of::<Arc<App>>()).unwrap();
+fn main() -> Result<(), Box<dyn Error>> {
+    let container = Container::init(AppModule::new("greeter"))?;
+    let app = container.get(key::of::<Arc<App>>())?;
     app.run();
+    Ok(())
 }
 
 struct AppModule {
@@ -32,7 +33,14 @@ impl Module for AppModule {
             .to_instance(self.app_name)
             .qualified_by("app_name")
             .set_on(configurer);
-
+        bind::<&'static str>()
+            .to_instance(self.app_name)
+            .qualified_by("app_name")
+            .set_on(configurer);
+        bind::<&'static str>()
+            .to_instance(self.app_name)
+            .qualified_by("app_name")
+            .set_on(configurer);
         bind::<Arc<dyn Logger>>()
             .to_component::<ConsoleLogger>()
             .within(SingletonScope)
