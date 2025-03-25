@@ -16,9 +16,9 @@ use std::sync::Arc;
 use iocc::prelude::*;
 use iocc::scope::SingletonScope;
 
-fn main() {
-    let container = Container::init(AppModule::new("greeter")).unwrap();
-    let app = container.get(key::of::<App>()).unwrap();
+fn main() -> Result<(), Box<dyn Error>> {
+    let container = Container::init(AppModule::new("greeter"))?;
+    let app = container.get(key::of::<Arc<App>>())?;
     app.run();
     // Result:
     // [greeter] Greeting from IOCC managed objects:
