@@ -16,9 +16,9 @@ use std::sync::Arc;
 use iocc::prelude::*;
 use iocc::scope::SingletonScope;
 
-fn main() {
-    let container = Container::init(AppModule::new("greeter")).unwrap();
-    let app = container.get(key::of::<App>()).unwrap();
+fn main() -> Result<(), Box<dyn Error>> {
+    let container = Container::init(AppModule::new("greeter"))?;
+    let app = container.get(key::of::<Arc<App>>())?;
     app.run();
     // Result:
     // [greeter] Greeting from IOCC managed objects:
@@ -43,10 +43,9 @@ impl Module for AppModule {
         &self,
         configurer: &mut dyn Configurer<Scope = Self::Scope>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        bind::<Arc<&'static str>>()
-            .to_instance(Arc::new(self.app_name))
+        bind::<&'static str>()
+            .to_instance(self.app_name)
             .qualified_by("app_name")
-            .within(SingletonScope)
             .set_on(configurer);
 
         bind::<Arc<dyn Logger>>()
@@ -66,7 +65,7 @@ impl Module for AppModule {
             .within(SingletonScope)
             .set_on(configurer);
 
-        bind::<App>().as_transient().set_on(configurer);
+        bind::<Arc<App>>().within(SingletonScope).set_on(configurer);
 
         Ok(())
     }
@@ -77,13 +76,13 @@ trait Logger: Send + Sync + 'static {
 }
 
 struct ConsoleLogger {
-    app_name: Arc<&'static str>,
+    app_name: &'static str,
 }
 
 #[component(Arc<dyn Logger>, Arc::new)]
 impl ConsoleLogger {
     #[inject]
-    pub fn new(#[named("app_name")] app_name: Arc<&'static str>) -> Self {
+    pub fn new(#[named("app_name")] app_name: &'static str) -> Self {
         Self { app_name }
     }
 }
@@ -145,7 +144,7 @@ struct App {
     greeters: HashMap<GreeterKind, Arc<dyn Greeter>>,
 }
 
-#[component]
+#[component(Arc<App>, Arc::new)]
 impl App {
     #[inject]
     fn new(

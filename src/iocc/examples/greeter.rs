@@ -33,14 +33,7 @@ impl Module for AppModule {
             .to_instance(self.app_name)
             .qualified_by("app_name")
             .set_on(configurer);
-        bind::<&'static str>()
-            .to_instance(self.app_name)
-            .qualified_by("app_name")
-            .set_on(configurer);
-        bind::<&'static str>()
-            .to_instance(self.app_name)
-            .qualified_by("app_name")
-            .set_on(configurer);
+
         bind::<Arc<dyn Logger>>()
             .to_component::<ConsoleLogger>()
             .within(SingletonScope)
