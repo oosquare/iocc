@@ -1,4 +1,4 @@
-use std::any;
+use std::any::{self, TypeId};
 use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::{Hash, Hasher};
@@ -70,7 +70,11 @@ where
     Q: TypedQualifier,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(f, "{}@{:?}", any::type_name::<T>(), self.qualifier)
+        if TypeId::of::<Q>() == TypeId::of::<()>() {
+            write!(f, "{}", any::type_name::<T>())
+        } else {
+            write!(f, "{}@{:?}", any::type_name::<T>(), self.qualifier)
+        }
     }
 }
 
