@@ -376,7 +376,7 @@ mod tests {
     #[test]
     fn shared_context_get_succeeds_when_lifetime_outlives_current_scope() {
         let mut providers = ProviderMap::new();
-        let key = key::qualified::<Arc<TestObject>, _>(0u32);
+        let key = key::qualified::<Arc<TestObject>>(0u32);
         providers.insert_shared(
             Box::new(key),
             TestObject::get_provider(0u32),
@@ -385,7 +385,7 @@ mod tests {
 
         let root_context = Arc::new(ContainerCore::new_root(Arc::new(providers)));
         let sub_context = Arc::new(ContainerCore::new_sub(Arc::clone(&root_context)).unwrap());
-        let key = key::qualified::<Arc<TestObject>, _>(0u32);
+        let key = key::qualified::<Arc<TestObject>>(0u32);
 
         let _ = sub_context.get(key).unwrap();
         let object = sub_context.get(key).unwrap();
@@ -405,12 +405,12 @@ mod tests {
 
         for i in 0..NUM {
             providers.insert_shared(
-                Box::new(key::qualified::<Arc<TestObject>, _>(2 * i)),
+                Box::new(key::qualified::<Arc<TestObject>>(2 * i)),
                 TestObject::get_provider(2 * i),
                 WebScope::Singleton,
             );
             providers.insert_shared(
-                Box::new(key::qualified::<Arc<TestObject>, _>(2 * i + 1)),
+                Box::new(key::qualified::<Arc<TestObject>>(2 * i + 1)),
                 TestObject::get_provider(2 * i + 1),
                 WebScope::Singleton,
             );
@@ -458,7 +458,7 @@ mod tests {
     fn shared_context_get_succeeds_when_object_lifetime_is_within_scope() {
         let mut providers = ProviderMap::new();
         providers.insert_shared(
-            Box::new(key::qualified::<Arc<TestObject>, u32>(0)),
+            Box::new(key::qualified::<Arc<TestObject>>(0u32)),
             TestObject::get_provider(0),
             WebScope::Session,
         );
@@ -470,7 +470,7 @@ mod tests {
         let context = ContainerCore::new_root(Arc::new(providers));
 
         assert!(context
-            .get(key::qualified::<Arc<TestObject>, u32>(0))
+            .get(key::qualified::<Arc<TestObject>>(0u32))
             .is_ok());
         assert!(context.get(key::of::<i32>()).is_ok());
     }

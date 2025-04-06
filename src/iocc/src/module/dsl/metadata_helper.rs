@@ -1,11 +1,9 @@
-use std::fmt::Debug;
-use std::hash::Hash;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
-use crate::key;
+use crate::key::{self, TypedQualifier};
 use crate::module::dsl::component_helper::ComponentBinding;
 use crate::module::dsl::instance_helper::InstanceBinding;
 use crate::module::dsl::provider_helper::ProviderBinding;
@@ -22,7 +20,7 @@ use super::closure_helper::ClosureBinding;
 pub struct MetadataBinding<KT, KQ, L>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
 {
     qualifier: KQ,
@@ -34,7 +32,7 @@ where
 impl<KT, KQ, L> MetadataBinding<KT, KQ, L>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
 {
     pub(super) fn new(qualifier: KQ, lifetime: L) -> Self {
@@ -47,7 +45,7 @@ where
 
     pub fn qualified_by<NewKQ>(self, qualifier: NewKQ) -> MetadataBinding<KT, NewKQ, L>
     where
-        NewKQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+        NewKQ: TypedQualifier,
     {
         MetadataBinding::new(qualifier, self.lifetime)
     }
@@ -103,11 +101,11 @@ where
 impl<KT, KQ, S> MetadataBinding<KT, KQ, S>
 where
     KT: SharedManaged + Component<Constructed = KT>,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     S: Scope,
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = ComponentProvider::<KT>::new();
         configurer.register_shared(key, provider, self.lifetime);
     }
@@ -116,11 +114,11 @@ where
 impl<C, KQ, S> MetadataBinding<Arc<C>, KQ, S>
 where
     C: Component<Constructed = Arc<C>>,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     S: Scope,
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
-        let key = key::qualified::<Arc<C>, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = ComponentProvider::<C>::new();
         configurer.register_shared(key, provider, self.lifetime);
     }
@@ -129,13 +127,13 @@ where
 impl<KT, KQ> MetadataBinding<KT, KQ, Transient>
 where
     KT: Component<Constructed = KT>,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
 {
     pub fn set_on<S>(self, configurer: &mut dyn Configurer<Scope = S>)
     where
         S: Scope,
     {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = ComponentProvider::<KT>::new();
         configurer.register(key, provider);
     }

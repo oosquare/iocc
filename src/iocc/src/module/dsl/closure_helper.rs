@@ -1,10 +1,8 @@
-use std::fmt::Debug;
-use std::hash::Hash;
 use std::marker::PhantomData;
 
 use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
-use crate::key;
+use crate::key::{self, TypedQualifier};
 use crate::module::dsl::ToLifetime;
 use crate::provider::closure::{Closure, ClosureProvider};
 use crate::scope::{Scope, Transient};
@@ -13,7 +11,7 @@ use crate::scope::{Scope, Transient};
 pub struct ClosureBinding<KT, KQ, L, C, D>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
     C: Closure<D, Constructed = KT>,
     D: Send + Sync + 'static,
@@ -28,7 +26,7 @@ where
 impl<KT, KQ, L, C, D> ClosureBinding<KT, KQ, L, C, D>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
     C: Closure<D, Constructed = KT>,
     D: Send + Sync + 'static,
@@ -44,7 +42,7 @@ where
 
     pub fn qualified_by<NewKQ>(self, qualifier: NewKQ) -> ClosureBinding<KT, NewKQ, L, C, D>
     where
-        NewKQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+        NewKQ: TypedQualifier,
     {
         ClosureBinding::new(self.closure, qualifier, self.lifetime)
     }
@@ -64,13 +62,13 @@ where
 impl<KT, KQ, S, C, D> ClosureBinding<KT, KQ, S, C, D>
 where
     KT: SharedManaged,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     S: Scope,
     C: Closure<D, Constructed = KT>,
     D: Send + Sync + 'static,
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = ClosureProvider::new(self.closure);
         configurer.register_shared(key, provider, self.lifetime);
     }
@@ -79,7 +77,7 @@ where
 impl<KT, KQ, C, D> ClosureBinding<KT, KQ, Transient, C, D>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     C: Closure<D, Constructed = KT>,
     D: Send + Sync + 'static,
 {
@@ -87,7 +85,7 @@ where
     where
         S: Scope,
     {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = ClosureProvider::new(self.closure);
         configurer.register(key, provider);
     }

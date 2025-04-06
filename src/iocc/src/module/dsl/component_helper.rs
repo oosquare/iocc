@@ -1,10 +1,8 @@
-use std::fmt::Debug;
-use std::hash::Hash;
 use std::marker::PhantomData;
 
 use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::SharedManaged;
-use crate::key;
+use crate::key::{self, TypedQualifier};
 use crate::module::dsl::ToLifetime;
 use crate::provider::component::{Component, ComponentProvider};
 use crate::scope::{Scope, Transient};
@@ -13,7 +11,7 @@ use crate::scope::{Scope, Transient};
 pub struct ComponentBinding<C, KQ, L>
 where
     C: Component,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
 {
     qualifier: KQ,
@@ -25,7 +23,7 @@ where
 impl<C, KQ, L> ComponentBinding<C, KQ, L>
 where
     C: Component,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
 {
     pub(super) fn new(qualifier: KQ, lifetime: L) -> Self {
@@ -38,7 +36,7 @@ where
 
     pub fn qualified_by<NewKQ>(self, qualifier: NewKQ) -> ComponentBinding<C, NewKQ, L>
     where
-        NewKQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+        NewKQ: TypedQualifier,
     {
         ComponentBinding::new(qualifier, self.lifetime)
     }
@@ -58,11 +56,11 @@ where
 impl<C, KQ, S> ComponentBinding<C, KQ, S>
 where
     C: Component<Constructed: SharedManaged>,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     S: Scope,
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
-        let key = key::qualified::<C::Constructed, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = ComponentProvider::<C>::new();
         configurer.register_shared(key, provider, self.lifetime);
     }
@@ -71,13 +69,13 @@ where
 impl<C, KQ> ComponentBinding<C, KQ, Transient>
 where
     C: Component,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
 {
     pub fn set_on<S>(self, configurer: &mut dyn Configurer<Scope = S>)
     where
         S: Scope,
     {
-        let key = key::qualified::<C::Constructed, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = ComponentProvider::<C>::new();
         configurer.register(key, provider);
     }

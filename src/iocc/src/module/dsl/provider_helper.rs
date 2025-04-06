@@ -1,9 +1,6 @@
-use std::fmt::Debug;
-use std::hash::Hash;
-
 use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
-use crate::key;
+use crate::key::{self, TypedQualifier};
 use crate::module::dsl::ToLifetime;
 use crate::provider::{TypedProvider, TypedSharedProvider};
 use crate::scope::{Scope, Transient};
@@ -12,7 +9,7 @@ use crate::scope::{Scope, Transient};
 pub struct ProviderBinding<KT, KQ, L, P>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
     P: TypedProvider<Output = KT>,
 {
@@ -25,7 +22,7 @@ where
 impl<KT, KQ, L, P> ProviderBinding<KT, KQ, L, P>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
     P: TypedProvider<Output = KT>,
 {
@@ -39,7 +36,7 @@ where
 
     pub fn qualified_by<NewKQ>(self, qualifier: NewKQ) -> ProviderBinding<KT, NewKQ, L, P>
     where
-        NewKQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+        NewKQ: TypedQualifier,
     {
         ProviderBinding::new(self.provider, qualifier, self.lifetime)
     }
@@ -59,12 +56,12 @@ where
 impl<KT, KQ, S, P> ProviderBinding<KT, KQ, S, P>
 where
     KT: SharedManaged,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     S: Scope,
     P: TypedSharedProvider<Output = KT>,
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         configurer.register_shared(key, self.provider, self.lifetime);
     }
 }
@@ -72,14 +69,14 @@ where
 impl<KT, KQ, P> ProviderBinding<KT, KQ, Transient, P>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     P: TypedProvider<Output = KT>,
 {
     pub fn set_on<S>(self, configurer: &mut dyn Configurer<Scope = S>)
     where
         S: Scope,
     {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         configurer.register(key, self.provider);
     }
 }

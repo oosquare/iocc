@@ -72,8 +72,6 @@ where
     Self: Debug + AsAny + DynHash + Send + Sync + 'static,
 {
     fn dyn_clone(&self) -> Box<dyn Qualifier>;
-
-    fn upcast_dyn(&self) -> &dyn Qualifier;
 }
 
 impl PartialEq for dyn Qualifier {
@@ -90,17 +88,20 @@ impl Hash for dyn Qualifier {
     }
 }
 
-pub trait TypedQualifier: Qualifier + Copy + Eq + Hash {}
+pub trait TypedQualifier: Qualifier + Copy + Eq + Hash {
+    /// Upcasts `self` to [`dyn Qualifier`].
+    fn upcast_dyn(&self) -> &dyn Qualifier;
+}
 
-impl<T> TypedQualifier for T where T: Debug + Copy + Eq + Hash + Send + Sync + 'static {}
+impl<T> TypedQualifier for T where T: Debug + Copy + Eq + Hash + Send + Sync + 'static {
+    fn upcast_dyn(&self) -> &dyn Qualifier {
+        self
+    }
+}
 
 impl<T: TypedQualifier> Qualifier for T {
     fn dyn_clone(&self) -> Box<dyn Qualifier> {
         Box::new(*self)
-    }
-
-    fn upcast_dyn(&self) -> &dyn Qualifier {
-        self
     }
 }
 
@@ -118,10 +119,9 @@ where
     KeyImpl::new(name)
 }
 
-pub fn qualified<T, Q>(qualifier: Q) -> impl TypedKey<Target = T, Qualifier = Q>
+pub fn qualified<T>(qualifier: impl TypedQualifier) -> impl TypedKey<Target = T>
 where
     T: Managed,
-    Q: Copy + Debug + Eq + Hash + Send + Sync + 'static,
 {
     KeyImpl::new(qualifier)
 }

@@ -1,9 +1,6 @@
-use std::fmt::Debug;
-use std::hash::Hash;
-
 use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
-use crate::key;
+use crate::key::{self, TypedQualifier};
 use crate::module::dsl::ToLifetime;
 use crate::provider::closure::{RawClosure, RawClosureProvider};
 use crate::scope::{Scope, Transient};
@@ -12,7 +9,7 @@ use crate::scope::{Scope, Transient};
 pub struct RawClosureBinding<KT, KQ, L, C>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
     C: RawClosure<Constructed = KT>,
 {
@@ -25,7 +22,7 @@ where
 impl<KT, KQ, L, C> RawClosureBinding<KT, KQ, L, C>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
     C: RawClosure<Constructed = KT>,
 {
@@ -39,7 +36,7 @@ where
 
     pub fn qualified_by<NewKQ>(self, qualifier: NewKQ) -> RawClosureBinding<KT, NewKQ, L, C>
     where
-        NewKQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+        NewKQ: TypedQualifier,
     {
         RawClosureBinding::new(self.closure, qualifier, self.lifetime)
     }
@@ -59,12 +56,12 @@ where
 impl<KT, KQ, S, C> RawClosureBinding<KT, KQ, S, C>
 where
     KT: SharedManaged,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     S: Scope,
     C: RawClosure<Constructed = KT>,
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = RawClosureProvider::new(self.closure);
         configurer.register_shared(key, provider, self.lifetime);
     }
@@ -73,14 +70,14 @@ where
 impl<KT, KQ, C> RawClosureBinding<KT, KQ, Transient, C>
 where
     KT: Managed,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     C: RawClosure<Constructed = KT>,
 {
     pub fn set_on<S>(self, configurer: &mut dyn Configurer<Scope = S>)
     where
         S: Scope,
     {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = RawClosureProvider::new(self.closure);
         configurer.register(key, provider);
     }

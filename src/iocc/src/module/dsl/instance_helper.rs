@@ -1,9 +1,6 @@
-use std::fmt::Debug;
-use std::hash::Hash;
-
 use crate::container::registry::{Configurer, TypedConfigurer};
 use crate::container::{Managed, SharedManaged};
-use crate::key;
+use crate::key::{self, TypedQualifier};
 use crate::module::dsl::ToLifetime;
 use crate::provider::instance::InstanceProvider;
 use crate::scope::{Scope, Transient};
@@ -12,7 +9,7 @@ use crate::scope::{Scope, Transient};
 pub struct InstanceBinding<KT, KQ, L>
 where
     KT: Managed + Clone,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
 {
     instance: KT,
@@ -24,7 +21,7 @@ where
 impl<KT, KQ, L> InstanceBinding<KT, KQ, L>
 where
     KT: Managed + Clone,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     L: ToLifetime,
 {
     pub(super) fn new(instance: KT, qualifier: KQ, lifetime: L) -> Self {
@@ -37,7 +34,7 @@ where
 
     pub fn qualified_by<NewKQ>(self, qualifier: NewKQ) -> InstanceBinding<KT, NewKQ, L>
     where
-        NewKQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+        NewKQ: TypedQualifier,
     {
         InstanceBinding::new(self.instance, qualifier, self.lifetime)
     }
@@ -57,11 +54,11 @@ where
 impl<KT, KQ, S> InstanceBinding<KT, KQ, S>
 where
     KT: SharedManaged + Clone,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
     S: Scope,
 {
     pub fn set_on(self, configurer: &mut dyn Configurer<Scope = S>) {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = InstanceProvider::new(self.instance);
         configurer.register_shared(key, provider, self.lifetime);
     }
@@ -70,13 +67,13 @@ where
 impl<KT, KQ> InstanceBinding<KT, KQ, Transient>
 where
     KT: Managed + Clone,
-    KQ: Copy + Debug + Eq + Hash + Send + Sync + 'static,
+    KQ: TypedQualifier,
 {
     pub fn set_on<S>(self, configurer: &mut dyn Configurer<Scope = S>)
     where
         S: Scope,
     {
-        let key = key::qualified::<KT, _>(self.qualifier);
+        let key = key::qualified(self.qualifier);
         let provider = InstanceProvider::new(self.instance);
         configurer.register(key, provider);
     }
