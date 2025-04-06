@@ -12,16 +12,31 @@ use crate::util::hash::DynHash;
 pub(crate) use crate::key::implementation::KeyImpl;
 pub use crate::key::pattern::{AnyPattern, KeyTypePattern, Pattern};
 
+/// An abstract identifier for each object managed by a container.
+///
+/// A [`Key`] consists of a target type and a qualifier. The target refers to
+/// the container-managed object identified by this key, while the qualifier
+/// helps distinguish different objects of the same type. Containers map keys
+/// to object definitions and managed objects.
+///
+/// To ensure type-safety, you are not allowed to implement your own [`Key`].
+/// Use functions provided by the [`key`] module to create keys instead.
+///
+/// [`key`]: crate::key
 pub trait Key
 where
     Self: Debug + Display + AsAny + DynHash + Send + Sync + 'static,
 {
+    /// Returns a [`TypeId`] of the target.
     fn target_type(&self) -> TypeId;
 
+    /// Returns a [`TypeId`] of the qualifier.
     fn qualifier_type(&self) -> TypeId;
 
+    /// Gets a type-erased qualifier.
     fn dyn_qualifier(&self) -> &dyn Qualifier;
 
+    /// Clones a new [`Key`] from `self`.
     fn dyn_clone(&self) -> Box<dyn Key>;
 }
 
@@ -57,20 +72,32 @@ impl<T: TypedKey> Key for T {
     }
 }
 
+/// A static variant of [`Key`], which specifies its target type and qualifier
+/// type.
+///
+/// To ensure type-safety, you are not allowed to implement your own
+/// [`TypedKey`]. Use functions provided by the [`key`] module to create keys instead.
+///
+/// [`key`]: crate::key
 pub trait TypedKey: Key + Copy + Eq + Hash {
     type Target: Managed;
 
     type Qualifier: TypedQualifier;
 
+    /// Gets the qualifier by value.
     fn qualifier(&self) -> Self::Qualifier;
 
+    /// Gets the qualifier by reference.
     fn qualifier_ref(&self) -> &Self::Qualifier;
 }
 
+/// An abstract value helps distinguish multiple managed objects of the same
+/// type.
 pub trait Qualifier
 where
     Self: Debug + AsAny + DynHash + Send + Sync + 'static,
 {
+    /// Clones a new [`Qualifier`] from `self`.
     fn dyn_clone(&self) -> Box<dyn Qualifier>;
 }
 
@@ -88,6 +115,7 @@ impl Hash for dyn Qualifier {
     }
 }
 
+/// A static variant of [`Qualifier`].
 pub trait TypedQualifier: Qualifier + Copy + Eq + Hash {
     /// Upcasts `self` to [`dyn Qualifier`].
     fn upcast_dyn(&self) -> &dyn Qualifier;
@@ -105,6 +133,7 @@ impl<T: TypedQualifier> Qualifier for T {
     }
 }
 
+/// Creates a key of target type `T` without a qualifier.
 pub fn of<T>() -> impl TypedKey<Target = T, Qualifier = ()>
 where
     T: Managed,
@@ -112,6 +141,7 @@ where
     KeyImpl::new(())
 }
 
+/// Creates a key of target type `T`, using a name as its qualifier.
 pub fn named<T>(name: &'static str) -> impl TypedKey<Target = T, Qualifier = &'static str>
 where
     T: Managed,
@@ -119,6 +149,7 @@ where
     KeyImpl::new(name)
 }
 
+/// Creates a key of target type `T` with any capable qualifier.
 pub fn qualified<T>(qualifier: impl TypedQualifier) -> impl TypedKey<Target = T>
 where
     T: Managed,

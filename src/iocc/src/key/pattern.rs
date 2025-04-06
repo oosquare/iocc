@@ -2,18 +2,33 @@ use std::any::TypeId;
 use std::marker::PhantomData;
 
 use crate::container::Managed;
-use crate::key::{Key, TypedQualifier};
+use crate::key::{Key, TypedQualifier, Qualifier};
 
-use super::Qualifier;
-
+/// A pattern used to match against all kinds of keys.
 pub trait Pattern {
+    /// The target type that all matched keys should have.
     type Target: Managed;
 
+    /// The qualifier type that all matched keys should have.
     type Qualifier;
 
+    /// Tests whether the key matches the pattern.
     fn matches(&self, key: &dyn Key) -> bool;
 }
 
+/// A [`Pattern`] which matches all keys of target type `T` and any qualifier
+/// type.
+///
+/// # Examples
+///
+/// ```rust
+/// # use iocc::key::{self, Pattern, AnyPattern};
+/// let pattern = AnyPattern::<i32>::new();
+/// assert!(pattern.matches(&key::of::<i32>()));
+/// assert!(pattern.matches(&key::named::<i32>("named")));
+/// assert!(!pattern.matches(&key::of::<i64>()));
+/// assert!(!pattern.matches(&key::named::<i64>("named")));
+/// ```
 pub struct AnyPattern<T>
 where
     T: Managed,
@@ -25,6 +40,7 @@ impl<T> AnyPattern<T>
 where
     T: Managed,
 {
+    /// Creates a new [`AnyPattern`].
     pub fn new() -> Self {
         Self {
             _marker: PhantomData,
@@ -45,6 +61,19 @@ where
     }
 }
 
+/// A [`Pattern`] which matches all keys of target type `T` and qualifier type
+/// `Q`.
+///
+/// # Examples
+///
+/// ```rust
+/// # use iocc::key::{self, Pattern, KeyTypePattern};
+/// let pattern = KeyTypePattern::<i32, ()>::new();
+/// assert!(pattern.matches(&key::of::<i32>()));
+/// assert!(!pattern.matches(&key::named::<i32>("named")));
+/// assert!(!pattern.matches(&key::of::<i64>()));
+/// assert!(!pattern.matches(&key::named::<i64>("named")));
+/// ```
 pub struct KeyTypePattern<T, Q>
 where
     T: Managed,
