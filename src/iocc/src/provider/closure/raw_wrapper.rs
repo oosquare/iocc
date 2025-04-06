@@ -8,6 +8,17 @@ use crate::container::{Managed, SharedManaged};
 use crate::provider::closure::RawClosure;
 use crate::provider::{TypedProvider, TypedSharedProvider};
 
+/// A [`Provider`] which supplies objects from a [`RawClosure`].
+///
+/// # Examples
+///
+/// ```rust
+/// # use std::convert::Infallible;
+/// # use iocc::provider::closure::RawClosureProvider;
+/// let provider = RawClosureProvider::new(|_injector| Ok(Ok::<_, Infallible>(42i32)));
+/// ```
+///
+/// [`Provider`]: crate::provider::Provider
 pub struct RawClosureProvider<T, C>
 where
     T: Managed,
@@ -21,6 +32,7 @@ where
     T: Managed,
     C: RawClosure<Constructed = T>,
 {
+    /// Creates a new [`RawClosureProvider`] from a [`RawClosure`].
     pub fn new(closure: C) -> Self {
         Self { closure }
     }

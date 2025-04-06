@@ -4,6 +4,9 @@ use crate::container::injector::{CallContext, InjectorError, TypedInjector};
 use crate::container::{Managed, SharedManaged};
 use crate::provider::{TypedProvider, TypedSharedProvider};
 
+/// A [`Provider`] which supplies objects cloned from an instance.
+///
+/// [`Provider`]: crate::provider::Provider
 pub struct InstanceProvider<T>
 where
     T: Managed + Clone,
@@ -15,6 +18,7 @@ impl<T> InstanceProvider<T>
 where
     T: Managed + Clone,
 {
+    /// Creates a new [`InstanceProvider`] from an instance.
     pub fn new(instance: T) -> Self {
         Self { instance }
     }

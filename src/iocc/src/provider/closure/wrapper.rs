@@ -8,6 +8,21 @@ use crate::prelude::{InjectorError, TypedInjector};
 use crate::provider::closure::Closure;
 use crate::provider::{TypedProvider, TypedSharedProvider};
 
+/// A [`Provider`] which supplies objects from a [`Closure`].
+///
+/// Note that each argument of the closure is fetched without specifying a
+/// qualifier.
+///
+/// # Examples
+///
+/// ```rust
+/// # use std::convert::Infallible;
+/// # use iocc::provider::closure::ClosureProvider;
+/// let closure = |a: i32, b: f64| Ok::<_, Infallible>((a, b));
+/// let provider = ClosureProvider::new(closure);
+/// ```
+///
+/// [`Provider`]: crate::provider::Provider
 pub struct ClosureProvider<T, C, D>
 where
     T: Managed,
@@ -24,6 +39,7 @@ where
     C: Closure<D, Constructed = T>,
     D: Send + Sync + 'static,
 {
+    /// Creates a new [`ClosureProvider`] from a [`Closure`].
     pub fn new(closure: C) -> Self {
         Self {
             closure,

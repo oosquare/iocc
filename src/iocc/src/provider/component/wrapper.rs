@@ -9,6 +9,10 @@ use crate::container::SharedManaged;
 use crate::provider::component::Component;
 use crate::provider::{TypedProvider, TypedSharedProvider};
 
+/// A [`Provider`] which supplies objects by using their component
+/// constructors.
+///
+/// [`Provider`]: crate::provider::Provider
 pub struct ComponentProvider<C>
 where
     C: Component,
@@ -20,6 +24,7 @@ impl<C> ComponentProvider<C>
 where
     C: Component,
 {
+    /// Creates a new [`ComponentProvider`].
     pub fn new() -> Self {
         Self {
             _marker: PhantomData,
