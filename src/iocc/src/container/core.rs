@@ -469,9 +469,7 @@ mod tests {
 
         let context = ContainerCore::new_root(Arc::new(providers));
 
-        assert!(context
-            .get(key::qualified::<Arc<TestObject>>(0u32))
-            .is_ok());
+        assert!(context.get(key::qualified::<Arc<TestObject>>(0u32)).is_ok());
         assert!(context.get(key::of::<i32>()).is_ok());
     }
 

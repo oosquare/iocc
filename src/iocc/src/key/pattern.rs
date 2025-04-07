@@ -2,7 +2,7 @@ use std::any::TypeId;
 use std::marker::PhantomData;
 
 use crate::container::Managed;
-use crate::key::{Key, TypedQualifier, Qualifier};
+use crate::key::{Key, Qualifier, TypedQualifier};
 
 /// A pattern used to match against all kinds of keys.
 pub trait Pattern {

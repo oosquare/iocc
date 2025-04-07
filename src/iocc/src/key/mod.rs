@@ -121,7 +121,10 @@ pub trait TypedQualifier: Qualifier + Copy + Eq + Hash {
     fn upcast_dyn(&self) -> &dyn Qualifier;
 }
 
-impl<T> TypedQualifier for T where T: Debug + Copy + Eq + Hash + Send + Sync + 'static {
+impl<T> TypedQualifier for T
+where
+    T: Debug + Copy + Eq + Hash + Send + Sync + 'static,
+{
     fn upcast_dyn(&self) -> &dyn Qualifier {
         self
     }
